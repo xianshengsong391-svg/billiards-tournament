@@ -20,6 +20,45 @@ function saveEvents(evts)  { DB.set('events', evts); }
 function getSettings()     { return DB.get('settings', { siteUrl: '', adminPwd: '' }); }
 function saveSettings_()   { DB.set('settings', getSettings()); }
 
+// 登录状态管理
+function isAdminLoggedIn() {
+  const settings = getSettings();
+  if (!settings.adminPwd) return true; // 未设置密码时免登录
+  return sessionStorage.getItem('adminLoggedIn') === 'true';
+}
+
+function doLogin() {
+  const pwd = document.getElementById('login-password').value.trim();
+  const settings = getSettings();
+  if (pwd === settings.adminPwd) {
+    sessionStorage.setItem('adminLoggedIn', 'true');
+    showAdminPanel();
+  } else {
+    document.getElementById('login-error').textContent = '密码错误，请重试';
+  }
+}
+
+function doLogout() {
+  sessionStorage.removeItem('adminLoggedIn');
+  showPage('home');
+  showToast('已退出登录');
+}
+
+function showAdminPanel() {
+  document.getElementById('admin-login-panel').style.display = 'none';
+  document.getElementById('admin-content').style.display = 'block';
+  refreshAdminSelects();
+}
+
+function checkAdminLogin() {
+  if (isAdminLoggedIn()) {
+    showAdminPanel();
+  } else {
+    document.getElementById('admin-login-panel').style.display = 'flex';
+    document.getElementById('admin-content').style.display = 'none';
+  }
+}
+
 // 生成唯一ID
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
 
@@ -41,7 +80,7 @@ function showPage(name) {
 
   if (name === 'home')   renderHome();
   if (name === 'events') renderEventsList();
-  if (name === 'admin')  refreshAdminSelects();
+  if (name === 'admin')  checkAdminLogin();
 }
 
 function switchAdminTab(tab) {
