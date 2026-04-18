@@ -430,35 +430,59 @@ function renderPlayersList(evt) {
   }).join('');
 }
 
-function approvePlayer(pid) {
+async function approvePlayer(pid) {
   const events = getEvents();
   const evt = events.find(e => e.id === currentEventId);
   if (!evt) return;
   const p = evt.players.find(p => p.id === pid);
   if (p) p.status = 'approved';
   saveEvents(events);
+  
+  // 同步到后端
+  try {
+    await saveEventAPI(evt);
+  } catch (e) {
+    console.error('同步到后端失败:', e);
+  }
+  
   renderPlayersList(evt);
   showToast('已通过报名');
 }
 
-function rejectPlayer(pid) {
+async function rejectPlayer(pid) {
   const events = getEvents();
   const evt = events.find(e => e.id === currentEventId);
   if (!evt) return;
   const p = evt.players.find(p => p.id === pid);
   if (p) p.status = 'rejected';
   saveEvents(events);
+  
+  // 同步到后端
+  try {
+    await saveEventAPI(evt);
+  } catch (e) {
+    console.error('同步到后端失败:', e);
+  }
+  
   renderPlayersList(evt);
   showToast('已拒绝报名');
 }
 
-function deletePlayer(pid) {
+async function deletePlayer(pid) {
   if (!confirm('确认删除该选手？')) return;
   const events = getEvents();
   const evt = events.find(e => e.id === currentEventId);
   if (!evt) return;
   evt.players = evt.players.filter(p => p.id !== pid);
   saveEvents(events);
+  
+  // 同步到后端
+  try {
+    await saveEventAPI(evt);
+  } catch (e) {
+    console.error('同步到后端失败:', e);
+  }
+  
   renderPlayersList(evt);
   showToast('选手已删除');
 }
@@ -476,7 +500,7 @@ function showAddPlayerModal() {
   document.getElementById('modal-add-player').style.display = 'flex';
 }
 
-function addPlayerManual() {
+async function addPlayerManual() {
   const name = document.getElementById('add-player-name').value.trim();
   if (!name) { showToast('请填写选手姓名'); return; }
   const events = getEvents();
@@ -493,6 +517,14 @@ function addPlayerManual() {
     source:  'manual'
   });
   saveEvents(events);
+  
+  // 同步到后端
+  try {
+    await saveEventAPI(evt);
+  } catch (e) {
+    console.error('同步到后端失败:', e);
+  }
+  
   closeModal('modal-add-player');
   renderPlayersList(evt);
   showToast('选手已添加');
