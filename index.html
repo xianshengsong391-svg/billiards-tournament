@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>大金台球 · 赛事管理系统</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+<!-- 顶部导航 -->
+<header class="header">
+  <div class="header-inner">
+    <div class="header-brand">
+      <img src="logo.jpg" alt="大金台球" class="header-logo">
+      <div class="header-text">
+        <span class="brand-name">大金台球</span>
+        <span class="brand-sub">DAKING BILLIARDS · 赛事管理</span>
+      </div>
+    </div>
+    <nav class="header-nav">
+      <button class="nav-btn active" onclick="showPage('home')" id="nav-home">🏠 首页</button>
+      <button class="nav-btn" onclick="showPage('events')" id="nav-events">🏆 赛事</button>
+      <button class="nav-btn" onclick="showPage('admin')" id="nav-admin">⚙️ 后台</button>
+    </nav>
+  </div>
+</header>
+
+<!-- 首页 -->
+<div id="page-home" class="page active">
+  <div class="hero">
+    <div class="hero-bg"></div>
+    <div class="hero-content">
+      <img src="logo.jpg" alt="大金台球" class="hero-logo">
+      <h1 class="hero-title">大金台球棋牌连锁</h1>
+      <p class="hero-subtitle">DAKING BILLIARDS & BOARD GAMES</p>
+      <div class="hero-stores">
+        <span class="store-tag">📍 韩家墅店</span>
+        <span class="store-tag">📍 青光店</span>
+        <span class="store-tag">📍 王庆坨店</span>
+      </div>
+      <div class="hero-phone">📞 <a href="tel:4000000357">4000-000-357</a></div>
+    </div>
+  </div>
+
+  <!-- 赛事快览 -->
+  <div class="section">
+    <div class="section-title">
+      <span class="section-icon">⚡</span> 进行中的赛事
+      <button class="btn-sm btn-primary" onclick="showPage('events')">全部赛事 →</button>
+    </div>
+    <div id="active-events-list">
+      <div class="empty-tip">暂无进行中的赛事，<a onclick="showPage('admin');switchAdminTab('create')">去创建</a></div>
+    </div>
+  </div>
+
+  <!-- 全局统计 -->
+  <div class="section">
+    <div class="section-title"><span class="section-icon">📊</span> 总体数据</div>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-num" id="stat-total-events">0</div>
+        <div class="stat-label">累计赛事</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" id="stat-total-players">0</div>
+        <div class="stat-label">累计选手</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" id="stat-total-matches">0</div>
+        <div class="stat-label">累计场次</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 赛事列表页 -->
+<div id="page-events" class="page">
+  <div class="page-header">
+    <h2>🏆 所有赛事</h2>
+    <button class="btn btn-primary" onclick="showPage('admin');switchAdminTab('create')">+ 创建赛事</button>
+  </div>
+  <div id="events-list" class="events-list"></div>
+</div>
+
+<!-- 后台管理页 -->
+<div id="page-admin" class="page">
+  <div class="admin-tabs">
+    <button class="tab-btn active" onclick="switchAdminTab('create')" id="tab-create">创建赛事</button>
+    <button class="tab-btn" onclick="switchAdminTab('manage')" id="tab-manage">赛事管理</button>
+    <button class="tab-btn" onclick="switchAdminTab('players')" id="tab-players">选手管理</button>
+    <button class="tab-btn" onclick="switchAdminTab('settings')" id="tab-settings">系统设置</button>
+  </div>
+
+  <!-- 创建赛事 -->
+  <div id="admin-create" class="admin-panel active">
+    <h3>创建新赛事</h3>
+    <div class="form-group">
+      <label>赛事名称 *</label>
+      <input type="text" id="event-name" placeholder="例：2026春季争霸赛" class="form-input">
+    </div>
+    <div class="form-group">
+      <label>赛事类型 *</label>
+      <select id="event-type" class="form-input" onchange="onEventTypeChange()">
+        <option value="9ball">9球追分赛</option>
+        <option value="6ball">6球追分赛</option>
+        <option value="4ball">4球追分赛</option>
+        <option value="8ball-standard">中式八球标准赛</option>
+        <option value="8ball-handicap">中式八球让球赛</option>
+        <option value="8ball-elastic">中式八球弹性让球赛</option>
+        <option value="custom">自定义</option>
+      </select>
+    </div>
+    <div class="form-group" id="custom-type-group" style="display:none">
+      <label>自定义赛事类型名称</label>
+      <input type="text" id="custom-type-name" placeholder="请输入赛事类型" class="form-input">
+    </div>
+    <div class="form-group">
+      <label>规则说明</label>
+      <textarea id="event-rules" class="form-input" rows="3" placeholder="详细说明赛事规则..."></textarea>
+    </div>
+    <div class="form-group">
+      <label>参赛门店</label>
+      <div class="checkbox-group">
+        <label class="checkbox-item"><input type="checkbox" value="韩家墅店" name="event-store" checked> 韩家墅店</label>
+        <label class="checkbox-item"><input type="checkbox" value="青光店" name="event-store" checked> 青光店</label>
+        <label class="checkbox-item"><input type="checkbox" value="王庆坨店" name="event-store" checked> 王庆坨店</label>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>赛制</label>
+      <select id="event-bracket-type" class="form-input">
+        <option value="single">单败淘汰赛</option>
+        <option value="double">双败淘汰赛</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>报名费（元）</label>
+      <input type="number" id="event-fee" placeholder="0" class="form-input" min="0">
+    </div>
+    <div class="form-group">
+      <label>赛事日期</label>
+      <input type="date" id="event-date" class="form-input">
+    </div>
+    <div class="form-group">
+      <label>赛事地点</label>
+      <input type="text" id="event-location" placeholder="例：大金台球韩家墅店" class="form-input">
+    </div>
+    <div class="form-group">
+      <label>微信收款码（上传图片）</label>
+      <div class="qr-upload-area" onclick="document.getElementById('wechat-qr').click()">
+        <input type="file" id="wechat-qr" accept="image/*" style="display:none" onchange="uploadPayQR('wechat',this)">
+        <div id="wechat-qr-preview" class="qr-preview-box">
+          <span>📷 点击上传微信收款码</span>
+        </div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>支付宝收款码（上传图片）</label>
+      <div class="qr-upload-area" onclick="document.getElementById('alipay-qr').click()">
+        <input type="file" id="alipay-qr" accept="image/*" style="display:none" onchange="uploadPayQR('alipay',this)">
+        <div id="alipay-qr-preview" class="qr-preview-box">
+          <span>📷 点击上传支付宝收款码</span>
+        </div>
+      </div>
+    </div>
+    <button class="btn btn-primary btn-full" onclick="createTournament()">🚀 创建赛事</button>
+  </div>
+
+  <!-- 赛事管理 -->
+  <div id="admin-manage" class="admin-panel">
+    <div class="admin-event-selector">
+      <label>选择赛事：</label>
+      <select id="manage-event-select" class="form-input" onchange="loadEventManage()">
+        <option value="">-- 请选择赛事 --</option>
+      </select>
+    </div>
+    <div id="event-manage-panel" style="display:none">
+      <div class="event-info-bar" id="event-info-bar"></div>
+
+      <!-- 对阵表生成 -->
+      <div class="manage-section">
+        <h4>🎯 对阵表</h4>
+        <div id="bracket-status"></div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="generateBracket()">⚡ 自动生成对阵表</button>
+          <button class="btn btn-outline" onclick="openBracketView()">👁 查看对阵表</button>
+          <button class="btn btn-outline" onclick="copyBracketLink()">🔗 复制对阵链接</button>
+        </div>
+      </div>
+
+      <!-- 报名管理 -->
+      <div class="manage-section">
+        <h4>📋 报名管理</h4>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="showRegisterQR()">📱 显示报名二维码</button>
+          <button class="btn btn-outline" onclick="showAddPlayerModal()">➕ 手动添加选手</button>
+        </div>
+        <div id="register-qr-area" style="display:none" class="qr-area">
+          <div id="register-qrcode"></div>
+          <p class="qr-tip">选手扫码即可在线报名</p>
+          <button class="btn btn-sm btn-outline" onclick="document.getElementById('register-qr-area').style.display='none'">收起</button>
+        </div>
+        <div class="players-filter">
+          <button class="filter-btn active" onclick="filterPlayers('all')" id="filter-all">全部</button>
+          <button class="filter-btn" onclick="filterPlayers('pending')" id="filter-pending">待审核</button>
+          <button class="filter-btn" onclick="filterPlayers('approved')" id="filter-approved">已通过</button>
+          <button class="filter-btn" onclick="filterPlayers('rejected')" id="filter-rejected">已拒绝</button>
+        </div>
+        <div id="players-list" class="players-list"></div>
+      </div>
+
+      <!-- 比赛管理 -->
+      <div class="manage-section" id="matches-section" style="display:none">
+        <h4>⚡ 比赛场次</h4>
+        <div id="matches-list" class="matches-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 选手管理 -->
+  <div id="admin-players" class="admin-panel">
+    <div class="admin-event-selector">
+      <label>选择赛事：</label>
+      <select id="players-event-select" class="form-input" onchange="loadPlayersPanel()">
+        <option value="">-- 请选择赛事 --</option>
+      </select>
+    </div>
+    <div id="players-panel"></div>
+  </div>
+
+  <!-- 系统设置 -->
+  <div id="admin-settings" class="admin-panel">
+    <h3>系统设置</h3>
+    <div class="form-group">
+      <label>管理员密码（留空不启用）</label>
+      <input type="password" id="admin-pwd" class="form-input" placeholder="设置后台访问密码">
+    </div>
+    <div class="form-group">
+      <label>网站访问地址（用于生成二维码）</label>
+      <input type="text" id="site-url" class="form-input" placeholder="例：http://192.168.1.100:8080">
+      <small>填写你本地服务器或公网地址，用于生成正确的报名和对阵二维码</small>
+    </div>
+    <button class="btn btn-primary" onclick="saveSettings()">保存设置</button>
+    <hr style="margin:20px 0; border-color:#1a3a2a">
+    <h4 style="color:#ff4444">危险区域</h4>
+    <button class="btn btn-danger" onclick="clearAllData()">🗑 清除所有数据</button>
+    <button class="btn btn-outline" onclick="exportData()">📤 导出数据</button>
+    <button class="btn btn-outline" onclick="importData()">📥 导入数据</button>
+    <input type="file" id="import-file" accept=".json" style="display:none" onchange="doImport(this)">
+  </div>
+</div>
+
+<!-- 赛事详情页 -->
+<div id="page-event-detail" class="page">
+  <div class="page-header">
+    <button class="btn-back" onclick="showPage('events')">← 返回</button>
+    <h2 id="detail-event-name">赛事详情</h2>
+  </div>
+  <div id="event-detail-content"></div>
+</div>
+
+<!-- ========== 弹窗层 ========== -->
+<!-- 添加选手弹窗 -->
+<div id="modal-add-player" class="modal" style="display:none">
+  <div class="modal-bg" onclick="closeModal('modal-add-player')"></div>
+  <div class="modal-box">
+    <div class="modal-title">添加选手</div>
+    <div class="form-group">
+      <label>姓名 *</label>
+      <input type="text" id="add-player-name" class="form-input" placeholder="选手姓名">
+    </div>
+    <div class="form-group">
+      <label>电话</label>
+      <input type="text" id="add-player-phone" class="form-input" placeholder="联系电话">
+    </div>
+    <div class="form-group">
+      <label>种子排名备注</label>
+      <input type="text" id="add-player-seed" class="form-input" placeholder="例：1号种子">
+    </div>
+    <div class="form-group">
+      <label>报名门店</label>
+      <select id="add-player-store" class="form-input"></select>
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-outline" onclick="closeModal('modal-add-player')">取消</button>
+      <button class="btn btn-primary" onclick="addPlayerManual()">确认添加</button>
+    </div>
+  </div>
+</div>
+
+<!-- 比分录入弹窗 -->
+<div id="modal-score" class="modal" style="display:none">
+  <div class="modal-bg" onclick="closeModal('modal-score')"></div>
+  <div class="modal-box">
+    <div class="modal-title">录入比分</div>
+    <div id="score-match-info" class="score-match-info"></div>
+    <div class="score-input-row">
+      <div class="score-player">
+        <div id="score-p1-name" class="score-name"></div>
+        <input type="number" id="score-p1" class="score-input" min="0" value="0">
+      </div>
+      <div class="score-vs">VS</div>
+      <div class="score-player">
+        <div id="score-p2-name" class="score-name"></div>
+        <input type="number" id="score-p2" class="score-input" min="0" value="0">
+      </div>
+    </div>
+    <div class="form-group" style="margin-top:12px">
+      <label>让球设置（0表示不让）</label>
+      <div class="handicap-row">
+        <span id="handicap-p1-name"></span>
+        <input type="number" id="handicap-p1" class="score-input-sm" min="0" value="0">
+        <span>让</span>
+        <span id="handicap-p2-name"></span>
+        <input type="number" id="handicap-p2" class="score-input-sm" min="0" value="0">
+        <span>球</span>
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-outline" onclick="closeModal('modal-score')">取消</button>
+      <button class="btn btn-primary" onclick="saveScore()">💾 保存比分</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast提示 -->
+<div id="toast" class="toast" style="display:none"></div>
+
+<script src="app.js"></script>
+</body>
+</html>

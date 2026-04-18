@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>赛事报名 - 大金台球</title>
+<link rel="stylesheet" href="style.css">
+<style>
+body { padding-top: 0; background: linear-gradient(135deg, #051a0d 0%, #0a2e1a 50%, #051a0d 100%); min-height: 100vh; }
+.register-header {
+  background: rgba(5,15,10,0.8);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--green-border);
+  padding: 16px;
+  text-align: center;
+  position: sticky; top: 0; z-index: 100;
+}
+.register-header img { width: 50px; height: 50px; border-radius: 50%; border: 2px solid var(--green); box-shadow: 0 0 20px var(--green-dim); margin-bottom: 8px; }
+.register-header h1 { font-size: 20px; color: var(--green); font-weight: 900; letter-spacing: 2px; text-shadow: 0 0 15px var(--green); }
+.register-header p { font-size: 12px; color: var(--text-sub); margin-top: 4px; }
+.register-container { max-width: 480px; margin: 0 auto; padding: 20px 16px 40px; }
+.event-info-card {
+  background: var(--bg-card); border: 1px solid var(--green-border);
+  border-radius: 16px; padding: 20px; margin-bottom: 20px;
+  box-shadow: var(--shadow);
+}
+.event-info-card h2 { font-size: 18px; color: var(--green); font-weight: 700; margin-bottom: 12px; }
+.event-meta-row { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-bottom: 12px; }
+.event-meta-row span { font-size: 13px; color: var(--text-sub); }
+.event-fee-box {
+  background: var(--green-dim); border: 1px solid var(--green-border);
+  border-radius: 10px; padding: 12px; text-align: center; margin: 12px 0;
+}
+.event-fee-box .fee-label { font-size: 12px; color: var(--text-sub); }
+.event-fee-box .fee-num { font-size: 32px; font-weight: 900; color: var(--green); text-shadow: 0 0 15px var(--green); }
+.event-fee-box .fee-unit { font-size: 14px; color: var(--text-sub); }
+.event-rules-box { background: var(--bg-input); border-radius: 10px; padding: 12px; font-size: 13px; color: var(--text-sub); line-height: 1.6; }
+.form-section { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 20px; margin-bottom: 16px; }
+.form-section h3 { font-size: 15px; color: var(--green); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+.form-section h3::before { content: ''; width: 4px; height: 16px; background: var(--green); border-radius: 2px; }
+.store-select-group { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.store-option {
+  background: var(--bg-input); border: 2px solid var(--border);
+  border-radius: 10px; padding: 12px 8px; text-align: center; cursor: pointer;
+  transition: all 0.2s;
+}
+.store-option input { display: none; }
+.store-option span { font-size: 13px; color: var(--text-sub); display: block; }
+.store-option:hover { border-color: var(--green-border); }
+.store-option.selected { background: var(--green-dim); border-color: var(--green); box-shadow: 0 0 15px var(--green-dim); }
+.store-option.selected span { color: var(--green); font-weight: 700; }
+.qr-display-area { background: var(--bg-input); border: 2px dashed var(--border); border-radius: 12px; padding: 16px; text-align: center; }
+.qr-display-area img { max-width: 200px; max-height: 200px; border-radius: 8px; margin-bottom: 8px; }
+.qr-display-area .qr-label { font-size: 12px; color: var(--text-sub); margin-bottom: 4px; }
+.qr-display-area .qr-type { font-size: 14px; color: var(--green); font-weight: 700; }
+.pay-note {
+  background: var(--bg-card2); border-left: 3px solid var(--yellow);
+  border-radius: 0 8px 8px 0; padding: 12px; margin: 12px 0;
+  font-size: 12px; color: var(--text-sub); line-height: 1.6;
+}
+.pay-note strong { color: var(--yellow); }
+.submit-btn {
+  width: 100%; padding: 14px; font-size: 16px; font-weight: 700;
+  background: linear-gradient(135deg, var(--green-dark), var(--green));
+  color: #050f0a; border: none; border-radius: 10px; cursor: pointer;
+  box-shadow: 0 4px 20px var(--green-dim); transition: all 0.2s;
+  margin-top: 8px;
+}
+.submit-btn:hover { box-shadow: 0 4px 30px var(--green); transform: translateY(-1px); }
+.submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.success-modal {
+  position: fixed; inset: 0; z-index: 300;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.9); backdrop-filter: blur(10px);
+  padding: 20px;
+}
+.success-box {
+  background: var(--bg-card); border: 2px solid var(--green-border);
+  border-radius: 20px; padding: 32px 24px; text-align: center;
+  max-width: 320px; width: 100%;
+  box-shadow: var(--shadow-lg);
+}
+.success-icon { font-size: 64px; margin-bottom: 16px; }
+.success-title { font-size: 22px; font-weight: 900; color: var(--green); margin-bottom: 8px; }
+.success-text { font-size: 14px; color: var(--text-sub); margin-bottom: 20px; line-height: 1.6; }
+.success-btn {
+  width: 100%; padding: 12px; background: var(--green-dim); color: var(--green);
+  border: 1px solid var(--green-border); border-radius: 8px;
+  cursor: pointer; font-size: 14px;
+}
+.loading-box { text-align: center; padding: 60px 20px; }
+.loading-box .spinner {
+  width: 40px; height: 40px; border: 3px solid var(--border);
+  border-top-color: var(--green); border-radius: 50%;
+  animation: spin 1s linear infinite; margin: 0 auto 16px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-box p { color: var(--text-sub); font-size: 14px; }
+.error-box { text-align: center; padding: 60px 20px; }
+.error-box .error-icon { font-size: 48px; margin-bottom: 12px; }
+.error-box h3 { color: var(--red); font-size: 18px; margin-bottom: 8px; }
+.error-box p { color: var(--text-sub); font-size: 14px; margin-bottom: 16px; }
+.error-box .btn { padding: 10px 20px; }
+</style>
+</head>
+<body>
+
+<!-- 头部 -->
+<div class="register-header">
+  <img src="logo.jpg" alt="大金台球">
+  <h1>大金台球赛事报名</h1>
+  <p>DAKING BILLIARDS CHAMPIONSHIP</p>
+</div>
+
+<!-- 主容器 -->
+<div class="register-container" id="container">
+  <!-- 加载中 -->
+  <div class="loading-box" id="loading">
+    <div class="spinner"></div>
+    <p>正在加载赛事信息...</p>
+  </div>
+
+  <!-- 错误提示 -->
+  <div class="error-box" id="error" style="display:none">
+    <div class="error-icon">⚠️</div>
+    <h3>无法加载赛事</h3>
+    <p id="error-msg">请检查链接是否正确</p>
+    <button class="btn btn-primary" onclick="location.href='index.html'">返回首页</button>
+  </div>
+
+  <!-- 报名表单 -->
+  <div id="form-content" style="display:none">
+    <!-- 赛事信息 -->
+    <div class="event-info-card">
+      <h2 id="event-name">--</h2>
+      <div class="event-meta-row">
+        <span id="event-type">--</span>
+        <span id="event-date">--</span>
+        <span id="event-location">--</span>
+      </div>
+      <div class="event-fee-box">
+        <div class="fee-label">报名费用</div>
+        <div class="fee-num" id="event-fee">--</div>
+        <div class="fee-unit">元/人</div>
+      </div>
+      <div class="event-rules-box" id="event-rules" style="display:none">
+        <strong style="color:var(--green)">📋 赛事规则</strong><br>
+        <span id="rules-text">--</span>
+      </div>
+    </div>
+
+    <!-- 报名表单 -->
+    <div class="form-section">
+      <h3>填写报名信息</h3>
+      <div class="form-group">
+        <label>选手姓名 *</label>
+        <input type="text" id="player-name" class="form-input" placeholder="请输入您的真实姓名">
+      </div>
+      <div class="form-group">
+        <label>联系电话 *</label>
+        <input type="tel" id="player-phone" class="form-input" placeholder="请输入手机号码">
+      </div>
+      <div class="form-group">
+        <label>种子排名备注（选填）</label>
+        <input type="text" id="player-seed" class="form-input" placeholder="例：1号种子、去年冠军">
+      </div>
+      <div class="form-group">
+        <label>选择参赛门店 *</label>
+        <div class="store-select-group" id="store-group">
+          <!-- 动态生成 -->
+        </div>
+      </div>
+    </div>
+
+    <!-- 支付区域 -->
+    <div class="form-section">
+      <h3>支付报名费</h3>
+      <p style="font-size:12px;color:var(--text-sub);margin-bottom:12px">请使用微信或支付宝扫码支付，支付后保留截图作为凭证</p>
+      <div id="qr-area" style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center">
+        <!-- 动态生成收款码 -->
+      </div>
+      <div class="pay-note">
+        <strong>💡 重要提示：</strong><br>
+        1. 请使用上方收款码支付报名费<br>
+        2. 支付成功后请截图保存支付凭证<br>
+        3. 提交报名后，工作人员会核对您的支付信息<br>
+        4. 如有问题请联系：4000-000-357
+      </div>
+    </div>
+
+    <button class="submit-btn" id="submit-btn" onclick="submitRegister()">🚀 提交报名</button>
+  </div>
+</div>
+
+<!-- 报名成功弹窗 -->
+<div id="success-modal" class="success-modal" style="display:none">
+  <div class="success-box">
+    <div class="success-icon">🎉</div>
+    <div class="success-title">报名提交成功！</div>
+    <div class="success-text">
+      您的报名信息已提交，工作人员会尽快审核。<br>
+      请留意手机通知，或关注对阵表更新。
+    </div>
+    <button class="success-btn" onclick="closeSuccess()">知道了</button>
+  </div>
+</div>
+
+<script>
+// 获取URL参数
+function getParam(name) {
+  const url = new URL(location.href);
+  return url.searchParams.get(name);
+}
+
+// 读取数据（与主应用共享localStorage）
+function getEvents() {
+  try { const v = localStorage.getItem('daking_events'); return v ? JSON.parse(v) : []; } catch { return []; }
+}
+
+// 全局变量
+let currentEvent = null;
+let selectedStore = '';
+
+// 初始化
+window.addEventListener('DOMContentLoaded', () => {
+  const eid = getParam('eid');
+  if (!eid) {
+    // 演示模式：显示提示但加载第一个可用赛事
+    const events = getEvents();
+    if (events.length > 0) {
+      loadEvent(events[0].id);
+      showToast('演示模式：已加载第一个赛事');
+    } else {
+      showError('缺少赛事ID，请使用正确的报名链接\n\n提示：先在后台创建赛事才能报名');
+    }
+    return;
+  }
+  loadEvent(eid);
+});
+
+function loadEvent(eid) {
+  const events = getEvents();
+  const evt = events.find(e => e.id === eid);
+  if (!evt) {
+    showError('赛事不存在或已删除');
+    return;
+  }
+  currentEvent = evt;
+  renderEvent();
+}
+
+function showError(msg) {
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('error').style.display = 'block';
+  document.getElementById('error-msg').textContent = msg;
+}
+
+function renderEvent() {
+  const evt = currentEvent;
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('form-content').style.display = 'block';
+
+  // 赛事信息
+  document.getElementById('event-name').textContent = evt.name;
+  document.getElementById('event-type').textContent = typeLabel(evt.type, evt.customType);
+  document.getElementById('event-date').textContent = '📅 ' + (evt.date || '待定');
+  document.getElementById('event-location').textContent = '📍 ' + (evt.location || '待定');
+  document.getElementById('event-fee').textContent = evt.fee || 0;
+
+  if (evt.rules) {
+    document.getElementById('event-rules').style.display = 'block';
+    document.getElementById('rules-text').textContent = evt.rules;
+  }
+
+  // 门店选择
+  const stores = evt.stores && evt.stores.length > 0 ? evt.stores : ['韩家墅店','青光店','王庆坨店'];
+  const sg = document.getElementById('store-group');
+  sg.innerHTML = stores.map((s, i) => `
+    <label class="store-option ${i === 0 ? 'selected' : ''}" onclick="selectStore(this,'${s}')">
+      <input type="radio" name="store" value="${s}" ${i === 0 ? 'checked' : ''}>
+      <span>${s}</span>
+    </label>
+  `).join('');
+  selectedStore = stores[0];
+
+  // 收款码
+  const qrArea = document.getElementById('qr-area');
+  let qrHTML = '';
+  if (evt.wechatQR) {
+    qrHTML += `
+      <div class="qr-display-area">
+        <div class="qr-label">微信扫码支付</div>
+        <img src="${evt.wechatQR}" alt="微信收款码">
+        <div class="qr-type">微信支付</div>
+      </div>`;
+  }
+  if (evt.alipayQR) {
+    qrHTML += `
+      <div class="qr-display-area">
+        <div class="qr-label">支付宝扫码支付</div>
+        <img src="${evt.alipayQR}" alt="支付宝收款码">
+        <div class="qr-type">支付宝支付</div>
+      </div>`;
+  }
+  if (!evt.wechatQR && !evt.alipayQR) {
+    qrHTML = '<div style="color:var(--text-muted);font-size:13px;padding:20px">暂无收款码，请联系主办方</div>';
+  }
+  qrArea.innerHTML = qrHTML;
+}
+
+function selectStore(el, store) {
+  document.querySelectorAll('.store-option').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+  el.querySelector('input').checked = true;
+  selectedStore = store;
+}
+
+function typeLabel(type, custom) {
+  const map = {
+    '9ball':'9球追分赛','6ball':'6球追分赛','4ball':'4球追分赛',
+    '8ball-standard':'中式八球标准赛','8ball-handicap':'中式八球让球赛',
+    '8ball-elastic':'弹性让球赛','custom': custom || '自定义'
+  };
+  return map[type] || type;
+}
+
+function submitRegister() {
+  const name = document.getElementById('player-name').value.trim();
+  const phone = document.getElementById('player-phone').value.trim();
+  const seed = document.getElementById('player-seed').value.trim();
+
+  if (!name) { showToast('请填写选手姓名'); return; }
+  if (!phone) { showToast('请填写联系电话'); return; }
+  if (!selectedStore) { showToast('请选择参赛门店'); return; }
+
+  // 保存报名数据
+  const events = getEvents();
+  const evt = events.find(e => e.id === currentEvent.id);
+  if (!evt) { showToast('赛事数据异常，请刷新重试'); return; }
+
+  // 检查是否已报名
+  const exists = evt.players.find(p => p.phone === phone && p.name === name);
+  if (exists) { showToast('您已报名，请勿重复提交'); return; }
+
+  evt.players.push({
+    id: uid(),
+    name,
+    phone,
+    seed,
+    store: selectedStore,
+    status: 'pending',
+    addedAt: Date.now(),
+    source: 'online'
+  });
+
+  localStorage.setItem('daking_events', JSON.stringify(events));
+
+  // 显示成功
+  document.getElementById('success-modal').style.display = 'flex';
+}
+
+function closeSuccess() {
+  document.getElementById('success-modal').style.display = 'none';
+  // 清空表单
+  document.getElementById('player-name').value = '';
+  document.getElementById('player-phone').value = '';
+  document.getElementById('player-seed').value = '';
+}
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+
+function showToast(msg, dur = 2500) {
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--bg-card);border:1px solid var(--green-border);color:var(--text-main);padding:10px 20px;border-radius:10px;font-size:13px;z-index:999;box-shadow:0 0 24px var(--green-dim);';
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), dur);
+}
+</script>
+</body>
+</html>

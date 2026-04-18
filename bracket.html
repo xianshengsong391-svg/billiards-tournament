@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>实时对阵表 - 大金台球</title>
+<link rel="stylesheet" href="style.css">
+<style>
+body { padding-top: 0; background: var(--bg-dark); min-height: 100vh; }
+.bracket-header {
+  background: rgba(5,15,10,0.95);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--green-border);
+  padding: 12px 16px;
+  position: sticky; top: 0; z-index: 100;
+}
+.bracket-header-top { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.bracket-header-top img { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--green); }
+.bracket-header-top h1 { font-size: 16px; color: var(--green); font-weight: 700; flex: 1; }
+.bracket-header-top .refresh-btn {
+  background: var(--green-dim); color: var(--green);
+  border: 1px solid var(--green-border); border-radius: 6px;
+  padding: 6px 12px; font-size: 12px; cursor: pointer;
+  display: flex; align-items: center; gap: 4px;
+}
+.bracket-header-top .refresh-btn:active { transform: scale(0.98); }
+.bracket-header-top .refresh-btn.spinning .refresh-icon { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.bracket-stats-bar {
+  display: flex; gap: 16px; font-size: 12px; color: var(--text-sub);
+}
+.bracket-stats-bar span { display: flex; align-items: center; gap: 4px; }
+.bracket-container { padding: 16px; overflow-x: auto; }
+.bracket-title { font-size: 14px; color: var(--green); font-weight: 700; margin-bottom: 12px; }
+.bracket-empty { text-align: center; padding: 60px 20px; }
+.bracket-empty .empty-icon { font-size: 48px; margin-bottom: 12px; }
+.bracket-empty h3 { color: var(--text-muted); font-size: 16px; margin-bottom: 8px; }
+.bracket-empty p { color: var(--text-sub); font-size: 13px; }
+
+/* 对阵表样式 */
+.bracket-wrapper { display: flex; gap: 0; min-width: max-content; }
+.bracket-column { display: flex; flex-direction: column; align-items: center; min-width: 160px; }
+.bracket-column-title {
+  background: var(--green-dim); border: 1px solid var(--green-border);
+  color: var(--green); font-size: 12px; font-weight: 700;
+  padding: 4px 16px; border-radius: 20px; margin-bottom: 12px;
+  letter-spacing: 1px;
+}
+.bracket-matches { display: flex; flex-direction: column; gap: 12px; }
+.bracket-match-card {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: 10px; overflow: hidden; width: 150px;
+  transition: all 0.2s; cursor: pointer;
+}
+.bracket-match-card:hover { border-color: var(--green-border); box-shadow: 0 0 15px var(--green-dim); }
+.bracket-match-card.completed { border-color: var(--green-border); }
+.bracket-match-card.winner-group { border-left: 3px solid var(--green); }
+.bracket-match-card.loser-group { border-left: 3px solid var(--yellow); }
+.bracket-match-card.final-group { border-left: 3px solid var(--blue); }
+.bracket-player {
+  display: flex; align-items: center; padding: 8px 10px;
+  border-bottom: 1px solid var(--border); gap: 8px;
+}
+.bracket-player:last-child { border-bottom: none; }
+.bracket-player.winner { background: var(--green-dim); }
+.bracket-player.bye { opacity: 0.4; }
+.bracket-player-num { font-size: 10px; color: var(--text-muted); width: 14px; }
+.bracket-player-name { flex: 1; font-size: 13px; font-weight: 600; color: var(--text-main); }
+.bracket-player-score {
+  font-size: 14px; font-weight: 900; color: var(--green);
+  text-shadow: 0 0 8px var(--green); min-width: 24px; text-align: right;
+}
+.bracket-connector { width: 20px; height: 2px; background: var(--green-border); }
+.bracket-champion {
+  background: linear-gradient(135deg, var(--green-dark), var(--green));
+  color: #050f0a; border-radius: 12px; padding: 16px; text-align: center;
+  margin: 20px auto; max-width: 300px;
+  box-shadow: 0 0 30px var(--green-dim);
+}
+.bracket-champion .crown { font-size: 32px; margin-bottom: 8px; }
+.bracket-champion .champ-title { font-size: 12px; font-weight: 700; opacity: 0.8; }
+.bracket-champion .champ-name { font-size: 24px; font-weight: 900; margin-top: 4px; }
+
+/* 比赛列表视图 */
+.matches-view { padding: 16px; }
+.matches-filter { display: flex; gap: 8px; margin-bottom: 16px; overflow-x: auto; }
+.matches-filter-btn {
+  background: transparent; border: 1px solid var(--border); color: var(--text-sub);
+  border-radius: 20px; padding: 6px 14px; font-size: 12px; white-space: nowrap; cursor: pointer;
+}
+.matches-filter-btn.active { background: var(--green-dim); color: var(--green); border-color: var(--green-border); }
+.match-card {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: 12px; padding: 14px; margin-bottom: 10px;
+  transition: all 0.2s; cursor: pointer;
+}
+.match-card:hover { border-color: var(--green-border); box-shadow: var(--shadow); }
+.match-card.completed { border-color: var(--green-border); }
+.match-card-header {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 11px; color: var(--text-muted); margin-bottom: 10px;
+}
+.match-card-status { padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; }
+.match-card-status.pending { background: #ffd70020; color: var(--yellow); border: 1px solid #ffd70050; }
+.match-card-status.completed { background: #00ff8820; color: var(--green); border: 1px solid var(--green-border); }
+.match-card-body { display: flex; align-items: center; gap: 12px; }
+.match-card-player { flex: 1; text-align: center; }
+.match-card-player-name { font-size: 15px; font-weight: 700; color: var(--text-main); }
+.match-card-player-name.winner { color: var(--green); text-shadow: 0 0 8px var(--green); }
+.match-card-player-handicap { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+.match-card-score-area { display: flex; align-items: center; gap: 8px; }
+.match-card-score {
+  font-size: 28px; font-weight: 900; color: var(--green);
+  text-shadow: 0 0 10px var(--green); min-width: 36px; text-align: center;
+}
+.match-card-score.winner { color: var(--green); }
+.match-card-score.loser { color: var(--text-muted); }
+.match-card-vs { font-size: 12px; color: var(--text-muted); }
+
+/* 底部导航 */
+.bottom-nav {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: rgba(5,15,10,0.98);
+  border-top: 1px solid var(--green-border);
+  display: flex; justify-content: space-around; padding: 8px 0;
+  z-index: 100;
+}
+.bottom-nav-btn {
+  background: none; border: none; color: var(--text-sub);
+  font-size: 11px; display: flex; flex-direction: column; align-items: center; gap: 4px;
+  cursor: pointer; padding: 4px 16px;
+}
+.bottom-nav-btn.active { color: var(--green); }
+.bottom-nav-btn .icon { font-size: 20px; }
+
+/* 内容区底部留白 */
+.content-area { padding-bottom: 70px; }
+
+/* 加载中 */
+.loading-box { text-align: center; padding: 100px 20px; }
+.loading-box .spinner {
+  width: 40px; height: 40px; border: 3px solid var(--border);
+  border-top-color: var(--green); border-radius: 50%;
+  animation: spin 1s linear infinite; margin: 0 auto 16px;
+}
+.loading-box p { color: var(--text-sub); font-size: 14px; }
+
+/* 比分录入弹窗 */
+.score-modal .modal-box { max-width: 360px; }
+.score-inputs { display: flex; align-items: center; justify-content: center; gap: 16px; margin: 16px 0; }
+.score-input-box { text-align: center; }
+.score-input-box .name { font-size: 14px; font-weight: 700; color: var(--text-main); margin-bottom: 8px; }
+.score-input-box input {
+  width: 70px; height: 60px; font-size: 32px; font-weight: 900;
+  text-align: center; background: var(--bg-dark); border: 2px solid var(--green-border);
+  color: var(--green); border-radius: 10px; outline: none;
+}
+.score-input-box input:focus { box-shadow: 0 0 15px var(--green-dim); }
+.score-vs-text { font-size: 14px; color: var(--text-muted); font-weight: 700; }
+</style>
+</head>
+<body>
+
+<!-- 头部 -->
+<div class="bracket-header">
+  <div class="bracket-header-top">
+    <img src="logo.jpg" alt="大金台球">
+    <h1 id="header-title">实时对阵表</h1>
+    <button class="refresh-btn" id="refresh-btn" onclick="refreshData()">
+      <span class="refresh-icon">🔄</span> 刷新
+    </button>
+  </div>
+  <div class="bracket-stats-bar">
+    <span>🏆 <span id="stat-event-type">--</span></span>
+    <span>👥 <span id="stat-players">--</span>人</span>
+    <span>⚡ <span id="stat-progress">--</span></span>
+  </div>
+</div>
+
+<!-- 内容区 -->
+<div class="content-area" id="content">
+  <div class="loading-box" id="loading">
+    <div class="spinner"></div>
+    <p>正在加载对阵数据...</p>
+  </div>
+
+  <div class="bracket-empty" id="empty" style="display:none">
+    <div class="empty-icon">📋</div>
+    <h3>暂无对阵表</h3>
+    <p>该赛事尚未生成对阵表</p>
+  </div>
+
+  <!-- 对阵表视图 -->
+  <div id="bracket-view" style="display:none">
+    <div class="bracket-container">
+      <div class="bracket-title">🏆 淘汰赛对阵表</div>
+      <div id="bracket-render-area"></div>
+    </div>
+    <div id="champion-area"></div>
+  </div>
+
+  <!-- 比赛列表视图 -->
+  <div class="matches-view" id="matches-view" style="display:none">
+    <div class="matches-filter" id="matches-filter">
+      <button class="matches-filter-btn active" onclick="filterMatches('all')">全部</button>
+      <button class="matches-filter-btn" onclick="filterMatches('pending')">未开始</button>
+      <button class="matches-filter-btn" onclick="filterMatches('completed')">已结束</button>
+    </div>
+    <div id="matches-list"></div>
+  </div>
+
+  <!-- 排名视图 -->
+  <div class="matches-view" id="ranking-view" style="display:none">
+    <div class="bracket-title">📊 选手战绩排行</div>
+    <div id="ranking-list"></div>
+  </div>
+</div>
+
+<!-- 底部导航 -->
+<div class="bottom-nav">
+  <button class="bottom-nav-btn active" id="nav-bracket" onclick="switchView('bracket')">
+    <span class="icon">🏆</span>
+    <span>对阵表</span>
+  </button>
+  <button class="bottom-nav-btn" id="nav-matches" onclick="switchView('matches')">
+    <span class="icon">⚡</span>
+    <span>比赛列表</span>
+  </button>
+  <button class="bottom-nav-btn" id="nav-ranking" onclick="switchView('ranking')">
+    <span class="icon">📊</span>
+    <span>战绩排行</span>
+  </button>
+</div>
+
+<!-- 比分录入弹窗 -->
+<div id="score-modal" class="modal score-modal" style="display:none">
+  <div class="modal-bg" onclick="closeScoreModal()"></div>
+  <div class="modal-box">
+    <div class="modal-title">录入比分</div>
+    <div id="score-match-info" style="font-size:12px;color:var(--text-muted);margin-bottom:12px;text-align:center"></div>
+    <div class="score-inputs">
+      <div class="score-input-box">
+        <div class="name" id="score-p1-name">选手1</div>
+        <input type="number" id="score-p1" min="0" value="0">
+      </div>
+      <div class="score-vs-text">VS</div>
+      <div class="score-input-box">
+        <div class="name" id="score-p2-name">选手2</div>
+        <input type="number" id="score-p2" min="0" value="0">
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-outline" onclick="closeScoreModal()">取消</button>
+      <button class="btn btn-primary" onclick="saveScore()">保存比分</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// 获取URL参数
+function getParam(name) {
+  const url = new URL(location.href);
+  return url.searchParams.get(name);
+}
+
+// 读取数据
+function getEvents() {
+  try { const v = localStorage.getItem('daking_events'); return v ? JSON.parse(v) : []; } catch { return []; }
+}
+
+// 全局变量
+let currentEvent = null;
+let currentView = 'bracket';
+let currentMatchFilter = 'all';
+let editingMatchId = null;
+
+// 初始化
+window.addEventListener('DOMContentLoaded', () => {
+  const eid = getParam('eid');
+  if (!eid) {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('empty').style.display = 'block';
+    document.getElementById('empty').innerHTML = `
+      <div class="empty-icon">⚠️</div>
+      <h3>缺少赛事ID</h3>
+      <p>请使用正确的对阵表链接</p>`;
+    return;
+  }
+  loadEvent(eid);
+});
+
+function loadEvent(eid) {
+  const events = getEvents();
+  const evt = events.find(e => e.id === eid);
+  if (!evt) {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('empty').style.display = 'block';
+    document.getElementById('empty').innerHTML = `
+      <div class="empty-icon">⚠️</div>
+      <h3>赛事不存在</h3>
+      <p>该赛事可能已被删除</p>`;
+    return;
+  }
+  currentEvent = evt;
+  renderAll();
+}
+
+function renderAll() {
+  const evt = currentEvent;
+  document.getElementById('loading').style.display = 'none';
+
+  // 更新头部信息
+  document.getElementById('header-title').textContent = evt.name;
+  document.getElementById('stat-event-type').textContent = typeLabel(evt.type, evt.customType);
+  const approved = (evt.players || []).filter(p => p.status === 'approved').length;
+  document.getElementById('stat-players').textContent = approved;
+
+  const totalM = (evt.matches || []).length;
+  const doneM = (evt.matches || []).filter(m => m.completed).length;
+  document.getElementById('stat-progress').textContent = `${doneM}/${totalM}`;
+
+  // 检查是否有对阵表
+  if (!evt.bracket || !evt.matches || evt.matches.length === 0) {
+    document.getElementById('empty').style.display = 'block';
+    document.getElementById('bracket-view').style.display = 'none';
+    document.getElementById('matches-view').style.display = 'none';
+    document.getElementById('ranking-view').style.display = 'none';
+    return;
+  }
+
+  document.getElementById('empty').style.display = 'none';
+
+  // 根据当前视图渲染
+  if (currentView === 'bracket') {
+    renderBracket();
+  } else if (currentView === 'matches') {
+    renderMatches();
+  } else if (currentView === 'ranking') {
+    renderRanking();
+  }
+}
+
+function switchView(view) {
+  currentView = view;
+  document.querySelectorAll('.bottom-nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('nav-' + view).classList.add('active');
+
+  document.getElementById('bracket-view').style.display = view === 'bracket' ? 'block' : 'none';
+  document.getElementById('matches-view').style.display = view === 'matches' ? 'block' : 'none';
+  document.getElementById('ranking-view').style.display = view === 'ranking' ? 'block' : 'none';
+
+  renderAll();
+}
+
+function refreshData() {
+  const btn = document.getElementById('refresh-btn');
+  btn.classList.add('spinning');
+
+  // 重新加载数据
+  const eid = getParam('eid');
+  if (eid) {
+    loadEvent(eid);
+  }
+
+  setTimeout(() => btn.classList.remove('spinning'), 500);
+}
+
+// 渲染对阵表
+function renderBracket() {
+  const evt = currentEvent;
+  const bracket = evt.bracket;
+  const area = document.getElementById('bracket-render-area');
+
+  if (bracket.type === 'single') {
+    area.innerHTML = renderSingleBracket(bracket);
+  } else {
+    area.innerHTML = renderDoubleBracket(bracket);
+  }
+
+  // 冠军展示
+  const champArea = document.getElementById('champion-area');
+  if (bracket.champion) {
+    champArea.innerHTML = `
+      <div class="bracket-champion">
+        <div class="crown">👑</div>
+        <div class="champ-title">🏆 冠军</div>
+        <div class="champ-name">${bracket.champion.name}</div>
+      </div>`;
+  } else {
+    champArea.innerHTML = '';
+  }
+}
+
+function renderSingleBracket(bracket) {
+  const rounds = bracket.rounds || [];
+  const roundNames = ['第一轮','第二轮','第三轮','第四轮','半决赛','决赛'];
+
+  let html = '<div class="bracket-wrapper">';
+
+  rounds.forEach((round, ri) => {
+    html += '<div class="bracket-column">';
+    html += `<div class="bracket-column-title">${roundNames[ri] || '第'+(ri+1)+'轮'}</div>`;
+    html += '<div class="bracket-matches">';
+
+    round.forEach((match, mi) => {
+      const p1 = match.p1 || { name: '待定' };
+      const p2 = match.p2 || { name: '待定' };
+      const s1 = match.score1 !== null ? match.score1 : '';
+      const s2 = match.score2 !== null ? match.score2 : '';
+      const isBye = match.isBye;
+
+      html += `<div class="bracket-match-card ${match.completed ? 'completed' : ''} ${isBye ? 'bye' : ''}" onclick="openMatch('${match.id}')">`;
+
+      // 选手1
+      html += `<div class="bracket-player ${match.winner && match.winner.pid === p1.pid ? 'winner' : ''} ${!p1.pid ? 'bye' : ''}">`;
+      html += `<span class="bracket-player-num">1</span>`;
+      html += `<span class="bracket-player-name">${p1.name}</span>`;
+      if (s1 !== '') html += `<span class="bracket-player-score">${s1}</span>`;
+      html += `</div>`;
+
+      // 选手2
+      html += `<div class="bracket-player ${match.winner && match.winner.pid === p2.pid ? 'winner' : ''} ${!p2.pid ? 'bye' : ''}">`;
+      html += `<span class="bracket-player-num">2</span>`;
+      html += `<span class="bracket-player-name">${p2.name}</span>`;
+      if (s2 !== '') html += `<span class="bracket-player-score">${s2}</span>`;
+      html += `</div>`;
+
+      html += '</div>';
+
+      // 连接线（除了最后一轮）
+      if (ri < rounds.length - 1) {
+        html += '<div style="height:12px"></div>';
+      }
+    });
+
+    html += '</div></div>';
+
+    // 轮间连接
+    if (ri < rounds.length - 1) {
+      html += '<div class="bracket-connector" style="align-self:center;margin-top:-20px"></div>';
+    }
+  });
+
+  html += '</div>';
+  return html;
+}
+
+function renderDoubleBracket(bracket) {
+  // 简化版双败淘汰显示
+  let html = '<div style="padding:20px;text-align:center;color:var(--text-sub)">';
+  html += '<p>双败淘汰赛对阵表</p>';
+  html += '<p style="font-size:12px;margin-top:8px">请使用比赛列表查看详细对阵</p>';
+  html += '</div>';
+
+  // 如果有胜者组数据，显示胜者组
+  if (bracket.winnerRounds && bracket.winnerRounds.length > 0) {
+    html += '<div class="bracket-title" style="margin-top:20px">胜者组</div>';
+    html += renderSingleBracket({ rounds: bracket.winnerRounds });
+  }
+
+  return html;
+}
+
+// 渲染比赛列表
+function renderMatches() {
+  const evt = currentEvent;
+  let matches = evt.matches || [];
+
+  if (currentMatchFilter === 'pending') {
+    matches = matches.filter(m => !m.completed);
+  } else if (currentMatchFilter === 'completed') {
+    matches = matches.filter(m => m.completed);
+  }
+
+  const list = document.getElementById('matches-list');
+  if (matches.length === 0) {
+    list.innerHTML = '<div class="empty-tip" style="text-align:center;padding:40px;color:var(--text-muted)">暂无比赛</div>';
+    return;
+  }
+
+  const groupNames = { winner: '胜者组', loser: '败者组', final: '总决赛' };
+  const roundNames = ['第一轮', '第二轮', '第三轮', '第四轮', '半决赛', '决赛'];
+
+  list.innerHTML = matches.map(m => {
+    const p1 = m.p1 || { name: '待定' };
+    const p2 = m.p2 || { name: '待定' };
+    const s1 = m.score1 !== null ? m.score1 : '-';
+    const s2 = m.score2 !== null ? m.score2 : '-';
+    const status = m.completed ? 'completed' : 'pending';
+    const statusText = m.completed ? '已结束' : '未开始';
+    const p1Win = m.completed && m.winner && m.winner.pid === p1.pid;
+    const p2Win = m.completed && m.winner && m.winner.pid === p2.pid;
+
+    return `
+    <div class="match-card ${m.completed ? 'completed' : ''}" onclick="openMatch('${m.id}')">
+      <div class="match-card-header">
+        <span>${groupNames[m.group] || ''} ${roundNames[m.roundIndex] || ''}</span>
+        <span class="match-card-status ${status}">${statusText}</span>
+      </div>
+      <div class="match-card-body">
+        <div class="match-card-player">
+          <div class="match-card-player-name ${p1Win ? 'winner' : ''}">${p1.name}</div>
+          ${m.handicap1 > 0 ? `<div class="match-card-player-handicap">让${m.handicap1}球</div>` : ''}
+        </div>
+        <div class="match-card-score-area">
+          <span class="match-card-score ${p1Win ? 'winner' : (m.completed ? 'loser' : '')}">${s1}</span>
+          <span class="match-card-vs">:</span>
+          <span class="match-card-score ${p2Win ? 'winner' : (m.completed ? 'loser' : '')}">${s2}</span>
+        </div>
+        <div class="match-card-player">
+          <div class="match-card-player-name ${p2Win ? 'winner' : ''}">${p2.name}</div>
+          ${m.handicap2 > 0 ? `<div class="match-card-player-handicap">让${m.handicap2}球</div>` : ''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function filterMatches(filter) {
+  currentMatchFilter = filter;
+  document.querySelectorAll('.matches-filter-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  renderMatches();
+}
+
+// 渲染战绩排行
+function renderRanking() {
+  const evt = currentEvent;
+  const approved = (evt.players || []).filter(p => p.status === 'approved');
+
+  // 计算战绩
+  const stats = {};
+  approved.forEach(p => {
+    stats[p.id] = { name: p.name, wins: 0, losses: 0, store: p.store || '' };
+  });
+
+  (evt.matches || []).filter(m => m.completed && !m.isBye).forEach(m => {
+    if (m.winner && stats[m.winner.pid]) stats[m.winner.pid].wins++;
+    if (m.loser && stats[m.loser.pid]) stats[m.loser.pid].losses++;
+  });
+
+  const list = Object.values(stats).sort((a, b) => {
+    // 按胜率排序
+    const aRate = a.wins + a.losses > 0 ? a.wins / (a.wins + a.losses) : 0;
+    const bRate = b.wins + b.losses > 0 ? b.wins / (b.wins + b.losses) : 0;
+    if (bRate !== aRate) return bRate - aRate;
+    return b.wins - a.wins;
+  });
+
+  const area = document.getElementById('ranking-list');
+  if (list.length === 0) {
+    area.innerHTML = '<div class="empty-tip" style="text-align:center;padding:40px;color:var(--text-muted)">暂无数据</div>';
+    return;
+  }
+
+  area.innerHTML = list.map((s, i) => {
+    const rank = i + 1;
+    const rankIcon = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `${rank}.`;
+    const total = s.wins + s.losses;
+    const rate = total > 0 ? Math.round(s.wins / total * 100) : 0;
+
+    return `
+    <div class="match-card">
+      <div class="match-card-body" style="justify-content:flex-start;gap:16px">
+        <div style="font-size:20px;width:36px;text-align:center">${rankIcon}</div>
+        <div style="flex:1">
+          <div style="font-size:15px;font-weight:700;color:var(--text-main)">${s.name}</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${s.store}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:18px;font-weight:900;color:var(--green)">${s.wins}胜 ${s.losses}负</div>
+          <div style="font-size:11px;color:var(--text-muted)">胜率 ${rate}%</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// 打开比赛详情/录入
+function openMatch(matchId) {
+  const evt = currentEvent;
+  const match = evt.matches.find(m => m.id === matchId);
+  if (!match) return;
+
+  editingMatchId = matchId;
+
+  const p1 = match.p1 || { name: '待定' };
+  const p2 = match.p2 || { name: '待定' };
+
+  document.getElementById('score-p1-name').textContent = p1.name;
+  document.getElementById('score-p2-name').textContent = p2.name;
+  document.getElementById('score-p1').value = match.score1 !== null ? match.score1 : 0;
+  document.getElementById('score-p2').value = match.score2 !== null ? match.score2 : 0;
+
+  const groupNames = { winner: '胜者组', loser: '败者组', final: '总决赛' };
+  const roundNames = ['第一轮', '第二轮', '第三轮', '第四轮', '半决赛', '决赛'];
+  document.getElementById('score-match-info').textContent =
+    `${groupNames[match.group] || ''} ${roundNames[match.roundIndex] || ''}`;
+
+  document.getElementById('score-modal').style.display = 'flex';
+}
+
+function closeScoreModal() {
+  document.getElementById('score-modal').style.display = 'none';
+  editingMatchId = null;
+}
+
+function saveScore() {
+  const s1 = parseInt(document.getElementById('score-p1').value) || 0;
+  const s2 = parseInt(document.getElementById('score-p2').value) || 0;
+
+  if (s1 === s2) {
+    alert('比分不能相同，必须有胜负');
+    return;
+  }
+
+  // 保存到localStorage
+  const events = getEvents();
+  const evt = events.find(e => e.id === currentEvent.id);
+  if (!evt) return;
+
+  const match = evt.matches.find(m => m.id === editingMatchId);
+  if (!match) return;
+
+  match.score1 = s1;
+  match.score2 = s2;
+  match.completed = true;
+  match.winner = s1 > s2 ? match.p1 : match.p2;
+  match.loser = s1 > s2 ? match.p2 : match.p1;
+
+  // 同步到bracket
+  syncBracketResult(evt, match);
+
+  localStorage.setItem('daking_events', JSON.stringify(events));
+
+  // 更新当前显示
+  currentEvent = evt;
+  closeScoreModal();
+  renderAll();
+}
+
+function syncBracketResult(evt, updatedMatch) {
+  if (!evt.bracket) return;
+  if (evt.bracket.type === 'single') {
+    const rounds = evt.bracket.rounds;
+    for (let ri = 0; ri < rounds.length - 1; ri++) {
+      const idx = rounds[ri].findIndex(m => m.id === updatedMatch.id);
+      if (idx >= 0) {
+        rounds[ri][idx] = { ...rounds[ri][idx], ...updatedMatch };
+        const nextMatchIdx = Math.floor(idx / 2);
+        const isP1 = idx % 2 === 0;
+        if (rounds[ri + 1] && rounds[ri + 1][nextMatchIdx]) {
+          if (isP1) rounds[ri + 1][nextMatchIdx].p1 = updatedMatch.winner;
+          else rounds[ri + 1][nextMatchIdx].p2 = updatedMatch.winner;
+        }
+        if (ri === rounds.length - 2) {
+          evt.bracket.champion = updatedMatch.winner;
+        }
+        return;
+      }
+    }
+    const lastRound = rounds[rounds.length - 1];
+    const idx = lastRound ? lastRound.findIndex(m => m.id === updatedMatch.id) : -1;
+    if (idx >= 0) {
+      lastRound[idx] = { ...lastRound[idx], ...updatedMatch };
+      evt.bracket.champion = updatedMatch.winner;
+    }
+  }
+}
+
+function typeLabel(type, custom) {
+  const map = {
+    '9ball': '9球追分赛', '6ball': '6球追分赛', '4ball': '4球追分赛',
+    '8ball-standard': '中式八球标准赛', '8ball-handicap': '中式八球让球赛',
+    '8ball-elastic': '弹性让球赛', 'custom': custom || '自定义'
+  };
+  return map[type] || type;
+}
+</script>
+</body>
+</html>
