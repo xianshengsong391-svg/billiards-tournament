@@ -224,30 +224,62 @@ let selectedStore = '';
 // 初始化
 window.addEventListener('DOMContentLoaded', () => {
   const eid = getParam('eid');
-  if (!eid) {
-    // 演示模式：显示提示但加载第一个可用赛事
-    const events = getEvents();
-    if (events.length > 0) {
-      loadEvent(events[0].id);
-      showToast('演示模式：已加载第一个赛事');
-    } else {
-      showError('缺少赛事ID，请使用正确的报名链接\n\n提示：先在后台创建赛事才能报名');
+  const dataParam = getParam('d'); // 压缩后的数据参数
+  
+  // 优先从URL参数读取赛事数据（二维码包含的数据）
+  if (dataParam) {
+    try {
+      // 解析压缩格式 {i:id, n:name, t:type, c:customType, d:date, l:location, f:fee, r:rules, s:stores}
+      const minData = JSON.parse(decodeURIComponent(dataParam));
+      currentEvent = {
+        id: minData.i,
+        name: minData.n,
+        type: minData.t,
+        customType: minData.c,
+        date: minData.d,
+        location: minData.l,
+        fee: minData.f,
+        rules: minData.r,
+        stores: minData.s,
+        wechatQR: '',
+        alipayQR: ''
+      };
+      
+      // 尝试从localStorage获取收款码（如果同设备）
+      try {
+        const extra = localStorage.getItem('daking_event_' + currentEvent.id);
+        if (extra) {
+          const extraData = JSON.parse(extra);
+          currentEvent.wechatQR = extraData.wechatQR || '';
+          currentEvent.alipayQR = extraData.alipayQR || '';
+        }
+      } catch {}
+      
+      renderEvent();
+      return;
+    } catch (e) {
+      console.error('解析赛事数据失败:', e);
     }
+  }
+  
+  // 如果没有data参数，尝试从localStorage读取（同一设备）
+  if (!eid) {
+    showError('缺少赛事ID，请使用正确的报名链接\n\n提示：先在后台创建赛事才能报名');
     return;
   }
-  loadEvent(eid);
-});
-
-function loadEvent(eid) {
+  
+  // 先从localStorage查找
   const events = getEvents();
   const evt = events.find(e => e.id === eid);
-  if (!evt) {
-    showError('赛事不存在或已删除');
+  if (evt) {
+    currentEvent = evt;
+    renderEvent();
     return;
   }
-  currentEvent = evt;
-  renderEvent();
-}
+  
+  // 如果localStorage没有，显示错误（选手和主办方不在同一设备）
+  showError('赛事不存在或已删除\n\n提示：请确保使用最新的报名二维码');
+});
 
 function showError(msg) {
   document.getElementById('loading').style.display = 'none';

@@ -472,9 +472,28 @@ function showRegisterQR() {
   const qcDiv = document.getElementById('register-qrcode');
   qcDiv.innerHTML = '';
 
+  const evt = getEventById(currentEventId);
+  if (!evt) { showToast('赛事数据异常'); return; }
+
   const settings = getSettings();
   const base = settings.siteUrl || (window.location.origin + (window.location.pathname.replace('index.html','')));
-  const url = base.replace(/\/$/, '') + '/register.html?eid=' + currentEventId;
+  
+  // 只放核心数据，收款码等大数据不放（避免URL太长）
+  // 压缩：用短key
+  const minData = {
+    i: evt.id,
+    n: evt.name,
+    t: evt.type,
+    c: evt.customType,
+    d: evt.date,
+    l: evt.location,
+    f: evt.fee,
+    r: evt.rules,
+    s: evt.stores
+  };
+  
+  const encodedData = encodeURIComponent(JSON.stringify(minData));
+  const url = base.replace(/\/$/, '') + '/register.html?eid=' + currentEventId + '&d=' + encodedData;
 
   try {
     new QRCode(qcDiv, {
@@ -484,12 +503,20 @@ function showRegisterQR() {
       colorLight: '#050f0a',
       correctLevel: QRCode.CorrectLevel.M
     });
+    
+    // 显示URL提示
+    const urlTip = area.querySelector('.qr-tip');
+    if (urlTip) urlTip.textContent = '请让选手扫码报名';
+    
+    // 保存完整数据到localStorage，供同设备查看
+    localStorage.setItem('daking_event_' + evt.id, JSON.stringify({
+      wechatQR: evt.wechatQR,
+      alipayQR: evt.alipayQR
+    }));
+    
   } catch(e) {
-    qcDiv.innerHTML = `<div style="font-size:12px;color:var(--text-sub);word-break:break-all;padding:10px">${url}</div>`;
+    qcDiv.innerHTML = `<div style="font-size:12px;color:var(--text-sub);word-break:break-all;padding:10px">二维码生成失败，请刷新重试</div>`;
   }
-
-  const urlTip = area.querySelector('.qr-tip');
-  if (urlTip) urlTip.textContent = '报名链接：' + url;
 }
 
 function copyBracketLink() {
