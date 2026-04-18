@@ -1,0 +1,6 @@
+{
+  "name": "billiards-tournament",
+  "version": "1.0.0",
+  "description": "台球赛事管理系统",
+  "type": "module"
+}

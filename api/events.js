@@ -1,11 +1,83 @@
 // Vercel Serverless Function - 赛事数据存储
-// 使用内存存储（Vercel免费版每次请求后可能重置，但比localStorage强）
+// 使用内存存储 + 本地文件备份（Vercel 免费版方案）
 
-// 内存数据库（注意：Vercel免费版函数冷启动会重置，建议后续升级到Vercel KV）
-let memoryDB = {
-  events: [],
-  registrations: []
-};
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
+import { join } from 'path';
+import { tmpdir } from 'os';
+
+// 数据文件路径（使用临时目录，Vercel 允许写入）
+const DATA_DIR = process.env.VERCEL ? '/tmp' : join(process.cwd(), 'data');
+const EVENTS_FILE = join(DATA_DIR, 'events.json');
+const REGISTRATIONS_FILE = join(DATA_DIR, 'registrations.json');
+
+// 内存缓存
+let memoryCache = null;
+let lastLoadTime = 0;
+const CACHE_TTL = 5000; // 5秒缓存
+
+// 确保数据目录存在
+function ensureDataDir() {
+  if (!existsSync(DATA_DIR)) {
+    try {
+      mkdirSync(DATA_DIR, { recursive: true });
+    } catch (e) {
+      console.error('Failed to create data dir:', e);
+    }
+  }
+}
+
+// 从文件加载数据
+function loadData() {
+  const now = Date.now();
+  
+  // 使用缓存
+  if (memoryCache && (now - lastLoadTime) < CACHE_TTL) {
+    return memoryCache;
+  }
+  
+  ensureDataDir();
+  
+  try {
+    let events = [];
+    let registrations = [];
+    
+    if (existsSync(EVENTS_FILE)) {
+      const data = readFileSync(EVENTS_FILE, 'utf8');
+      events = JSON.parse(data);
+    }
+    
+    if (existsSync(REGISTRATIONS_FILE)) {
+      const data = readFileSync(REGISTRATIONS_FILE, 'utf8');
+      registrations = JSON.parse(data);
+    }
+    
+    memoryCache = { events, registrations };
+    lastLoadTime = now;
+    return memoryCache;
+  } catch (error) {
+    console.error('Load data error:', error);
+    return { events: [], registrations: [] };
+  }
+}
+
+// 保存数据到文件
+function saveData(key, data) {
+  ensureDataDir();
+  
+  try {
+    const file = key === 'events' ? EVENTS_FILE : REGISTRATIONS_FILE;
+    writeFileSync(file, JSON.stringify(data, null, 2));
+    
+    // 更新缓存
+    if (memoryCache) {
+      memoryCache[key] = data;
+    }
+    return true;
+  } catch (error) {
+    console.error('Save data error:', error);
+    return false;
+  }
+}
 
 export default async function handler(req, res) {
   // 设置CORS，允许前端访问
@@ -20,54 +92,63 @@ export default async function handler(req, res) {
   const { action } = req.query;
 
   try {
+    // 加载当前数据
+    let { events, registrations } = loadData();
+
     switch (action) {
       case 'list':
-        return res.json({ success: true, data: memoryDB.events });
+        return res.json({ success: true, data: events });
       
       case 'get':
-        const event = memoryDB.events.find(e => e.id === req.query.id);
+        const event = events.find(e => e.id === req.query.id);
         return res.json({ success: true, data: event || null });
       
       case 'create':
         const newEvent = req.body;
         newEvent.createdAt = Date.now();
-        memoryDB.events.push(newEvent);
+        events.push(newEvent);
+        saveData('events', events);
         return res.json({ success: true, data: newEvent });
       
       case 'update':
-        const idx = memoryDB.events.findIndex(e => e.id === req.body.id);
+        const idx = events.findIndex(e => e.id === req.body.id);
         if (idx >= 0) {
-          memoryDB.events[idx] = { ...memoryDB.events[idx], ...req.body };
-          return res.json({ success: true, data: memoryDB.events[idx] });
+          events[idx] = { ...events[idx], ...req.body };
+          saveData('events', events);
+          return res.json({ success: true, data: events[idx] });
         }
         return res.json({ success: false, error: 'Event not found' });
       
       case 'delete':
-        memoryDB.events = memoryDB.events.filter(e => e.id !== req.query.id);
+        events = events.filter(e => e.id !== req.query.id);
+        saveData('events', events);
         return res.json({ success: true });
       
       case 'register':
         // 选手报名
         const reg = req.body;
         reg.submittedAt = Date.now();
-        memoryDB.registrations.push(reg);
+        registrations.push(reg);
+        saveData('registrations', registrations);
         
         // 同时更新赛事的players
-        const evt = memoryDB.events.find(e => e.id === reg.eventId);
+        const evt = events.find(e => e.id === reg.eventId);
         if (evt) {
           if (!evt.players) evt.players = [];
           evt.players.push(reg.player);
+          saveData('events', events);
         }
         return res.json({ success: true, data: reg });
       
       case 'registrations':
-        const regs = memoryDB.registrations.filter(r => r.eventId === req.query.eventId);
+        const regs = registrations.filter(r => r.eventId === req.query.eventId);
         return res.json({ success: true, data: regs });
       
       default:
         return res.json({ success: false, error: 'Unknown action' });
     }
   } catch (error) {
+    console.error('Handler error:', error);
     return res.json({ success: false, error: error.message });
   }
 }
