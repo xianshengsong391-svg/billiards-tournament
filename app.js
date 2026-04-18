@@ -639,8 +639,21 @@ function showRegisterQR() {
   const settings = getSettings();
   const base = settings.siteUrl || (window.location.origin + window.location.pathname.replace('index.html',''));
   
-  // 简化URL，只传赛事ID，数据从后端获取
-  const url = base.replace(/\/$/, '') + '/register.html?eid=' + currentEventId;
+  // 把核心赛事数据编码到URL，避免依赖后端
+  const minData = {
+    i: evt.id,
+    n: evt.name,
+    t: evt.type,
+    c: evt.customType,
+    d: evt.date,
+    l: evt.location,
+    f: evt.fee,
+    r: evt.rules,
+    s: evt.stores
+  };
+  
+  const encodedData = encodeURIComponent(JSON.stringify(minData));
+  const url = base.replace(/\/$/, '') + '/register.html?eid=' + currentEventId + '&d=' + encodedData;
 
   try {
     // 检查QRCode是否可用
@@ -666,15 +679,6 @@ function showRegisterQR() {
   }
 }
 
-function copyBracketLink() {
-  if (!currentEventId) { showToast('请先选择赛事'); return; }
-  const settings = getSettings();
-  const base = settings.siteUrl || (window.location.origin + window.location.pathname.replace('index.html',''));
-  const url = base.replace(/\/$/, '') + '/bracket.html?eid=' + currentEventId;
-  copyText(url);
-}
-
-function openBracketView() {
   if (!currentEventId) { showToast('请先选择赛事'); return; }
   window.open('bracket.html?eid=' + currentEventId, '_blank');
 }
