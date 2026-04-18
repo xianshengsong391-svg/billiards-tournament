@@ -639,21 +639,8 @@ function showRegisterQR() {
   const settings = getSettings();
   const base = settings.siteUrl || (window.location.origin + window.location.pathname.replace('index.html',''));
   
-  // 把核心赛事数据编码到URL，避免依赖后端
-  const minData = {
-    i: evt.id,
-    n: evt.name,
-    t: evt.type,
-    c: evt.customType,
-    d: evt.date,
-    l: evt.location,
-    f: evt.fee,
-    r: evt.rules,
-    s: evt.stores
-  };
-  
-  const encodedData = encodeURIComponent(JSON.stringify(minData));
-  const url = base.replace(/\/$/, '') + '/register.html?eid=' + currentEventId + '&d=' + encodedData;
+  // 只传赛事ID，数据从后端或localStorage获取
+  const url = base.replace(/\/$/, '') + '/register.html?eid=' + currentEventId;
 
   try {
     // 检查QRCode是否可用
@@ -666,7 +653,7 @@ function showRegisterQR() {
       width: 200, height: 200,
       colorDark: '#00ff88',
       colorLight: '#050f0a',
-      correctLevel: QRCode.CorrectLevel.M
+      correctLevel: QRCode.CorrectLevel.L
     });
     
     // 显示URL提示
