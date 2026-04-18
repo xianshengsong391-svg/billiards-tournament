@@ -253,21 +253,14 @@
       <label>选择赛事：</label>
       <select id="players-event-select" class="form-input" onchange="loadPlayersPanel()">
         <option value="">-- 请选择赛事 --</option>
-      </select>
-    </div>
-    <div id="players-panel"></div>
-  </div>
-
-  <!-- 系统设置 -->
-  <div id="admin-settings" class="admin-panel">
-    <h3>系统设置</h3>
     <div class="form-group">
       <label>当前登录状态</label>
-      <div style="padding:12px; background:rgba(0,255,136,0.1); border-radius:8px; border:1px solid var(--green-border);">
+      <div id="settings-login-status" style="padding:12px; background:rgba(0,255,136,0.1); border-radius:8px; border:1px solid var(--green-border);">
         <span style="color:var(--green)">✓ 已登录</span>
         <button class="btn btn-sm btn-outline" onclick="doLogout()" style="margin-left:10px;">退出登录</button>
       </div>
     </div>
+
     <div class="form-group">
       <label>管理员密码（留空不启用登录）</label>
       <input type="password" id="admin-pwd" class="form-input" placeholder="设置后台访问密码">
