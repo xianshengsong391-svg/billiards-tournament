@@ -85,6 +85,24 @@
 
 <!-- 后台管理页 -->
 <div id="page-admin" class="page">
+  <!-- 登录界面 -->
+  <div id="admin-login-panel" class="admin-login-container">
+    <div class="login-box">
+      <img src="logo.jpg" alt="大金台球" class="login-logo">
+      <h2>🔐 后台管理登录</h2>
+      <p class="login-sub">大金台球棋牌连锁 · 赛事管理系统</p>
+      <div class="form-group">
+        <label>管理员密码</label>
+        <input type="password" id="login-password" class="form-input" placeholder="请输入密码" onkeypress="if(event.key==='Enter')doLogin()">
+      </div>
+      <button class="btn btn-primary btn-block" onclick="doLogin()">登录</button>
+      <p id="login-error" class="login-error"></p>
+      <p class="login-hint">首次使用请在系统设置中设置密码</p>
+    </div>
+  </div>
+  
+  <!-- 后台内容（登录后显示） -->
+  <div id="admin-content" style="display:none">
   <div class="admin-tabs">
     <button class="tab-btn active" onclick="switchAdminTab('create')" id="tab-create">创建赛事</button>
     <button class="tab-btn" onclick="switchAdminTab('manage')" id="tab-manage">赛事管理</button>
@@ -233,8 +251,16 @@
   <div id="admin-settings" class="admin-panel">
     <h3>系统设置</h3>
     <div class="form-group">
-      <label>管理员密码（留空不启用）</label>
+      <label>当前登录状态</label>
+      <div style="padding:12px; background:rgba(0,255,136,0.1); border-radius:8px; border:1px solid var(--green-border);">
+        <span style="color:var(--green)">✓ 已登录</span>
+        <button class="btn btn-sm btn-outline" onclick="doLogout()" style="margin-left:10px;">退出登录</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>管理员密码（留空不启用登录）</label>
       <input type="password" id="admin-pwd" class="form-input" placeholder="设置后台访问密码">
+      <small>设置密码后，访问后台需要登录</small>
     </div>
     <div class="form-group">
       <label>网站访问地址（用于生成二维码）</label>
@@ -249,6 +275,7 @@
     <button class="btn btn-outline" onclick="importData()">📥 导入数据</button>
     <input type="file" id="import-file" accept=".json" style="display:none" onchange="doImport(this)">
   </div>
+  </div><!-- /admin-content -->
 </div>
 
 <!-- 赛事详情页 -->
