@@ -364,17 +364,10 @@ function submitRegister() {
   if (!name) { showToast('请填写选手姓名'); return; }
   if (!phone) { showToast('请填写联系电话'); return; }
   if (!selectedStore) { showToast('请选择参赛门店'); return; }
+  if (!currentEvent) { showToast('赛事数据异常，请刷新重试'); return; }
 
-  // 保存报名数据
-  const events = getEvents();
-  const evt = events.find(e => e.id === currentEvent.id);
-  if (!evt) { showToast('赛事数据异常，请刷新重试'); return; }
-
-  // 检查是否已报名
-  const exists = evt.players.find(p => p.phone === phone && p.name === name);
-  if (exists) { showToast('您已报名，请勿重复提交'); return; }
-
-  evt.players.push({
+  // 选手报名信息
+  const playerData = {
     id: uid(),
     name,
     phone,
@@ -383,9 +376,32 @@ function submitRegister() {
     status: 'pending',
     addedAt: Date.now(),
     source: 'online'
-  });
+  };
 
-  localStorage.setItem('daking_events', JSON.stringify(events));
+  // 尝试保存到localStorage（如果同设备）
+  const events = getEvents();
+  const evt = events.find(e => e.id === currentEvent.id);
+  if (evt) {
+    // 检查是否已报名
+    const exists = evt.players.find(p => p.phone === phone && p.name === name);
+    if (exists) { showToast('您已报名，请勿重复提交'); return; }
+    evt.players.push(playerData);
+    localStorage.setItem('daking_events', JSON.stringify(events));
+  }
+  
+  // 保存到专门的报名列表（用于主办方查看）
+  let registrations = [];
+  try {
+    const v = localStorage.getItem('daking_registrations');
+    if (v) registrations = JSON.parse(v);
+  } catch {}
+  registrations.push({
+    eventId: currentEvent.id,
+    eventName: currentEvent.name,
+    player: playerData,
+    submittedAt: Date.now()
+  });
+  localStorage.setItem('daking_registrations', JSON.stringify(registrations));
 
   // 显示成功
   document.getElementById('success-modal').style.display = 'flex';
