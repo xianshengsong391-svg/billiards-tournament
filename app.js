@@ -38,14 +38,25 @@ async function getEventsAPI() {
 async function saveEventAPI(eventData) {
   try {
     if (window.api) {
-      await window.api.createEvent(eventData);
+      // 检查是新建还是更新
+      const existing = await window.api.getEvent(eventData.id);
+      if (existing) {
+        await window.api.updateEvent(eventData);
+      } else {
+        await window.api.createEvent(eventData);
+      }
     }
   } catch (e) {
-    console.log('API保存失败');
+    console.log('API保存失败:', e);
   }
   // 同时保存本地
   const events = getEvents();
-  events.unshift(eventData);
+  const idx = events.findIndex(e => e.id === eventData.id);
+  if (idx >= 0) {
+    events[idx] = eventData;
+  } else {
+    events.unshift(eventData);
+  }
   saveEvents(events);
 }
 function getSettings()     { return DB.get('settings', { siteUrl: '', adminPwd: '' }); }
@@ -366,20 +377,38 @@ function updateEvent(updatedEvt) {
   if (idx >= 0) { events[idx] = updatedEvt; saveEvents(events); }
 }
 
-function toggleEventStatus(id) {
+async function toggleEventStatus(id) {
   const events = getEvents();
   const evt = events.find(e => e.id === id);
   if (!evt) return;
   evt.status = evt.status === 'active' ? 'ended' : 'active';
   saveEvents(events);
+  
+  // 同步到后端
+  try {
+    await saveEventAPI(evt);
+  } catch (e) {
+    console.error('同步到后端失败:', e);
+  }
+  
   loadEventManage();
   showToast('赛事状态已更新');
 }
 
-function deleteEvent(id) {
+async function deleteEvent(id) {
   if (!confirm('确认删除这个赛事？此操作不可恢复！')) return;
   const events = getEvents().filter(e => e.id !== id);
   saveEvents(events);
+  
+  // 同步到后端
+  try {
+    if (window.api) {
+      await window.api.deleteEvent(id);
+    }
+  } catch (e) {
+    console.error('同步删除到后端失败:', e);
+  }
+  
   currentEventId = null;
   document.getElementById('manage-event-select').value = '';
   document.getElementById('event-manage-panel').style.display = 'none';
