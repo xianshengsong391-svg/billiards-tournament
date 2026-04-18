@@ -82,9 +82,16 @@ function doLogin() {
 
 function doLogout() {
   sessionStorage.removeItem('adminLoggedIn');
-  showPage('home');
   showToast('已退出登录');
+  // 刷新设置页面显示
+  renderSettingsLoginStatus();
+  // 如果当前在设置页面，刷新显示
+  if (document.getElementById('settings-content').style.display !== 'none') {
+    loadSettingsUI();
+  }
+  showPage('home');
 }
+
 
 function showAdminPanel() {
   document.getElementById('admin-login-panel').style.display = 'none';
