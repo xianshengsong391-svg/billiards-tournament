@@ -17,6 +17,37 @@ const DB = {
 // 获取/保存所有赛事
 function getEvents()       { return DB.get('events', []); }
 function saveEvents(evts)  { DB.set('events', evts); }
+
+// 后端API模式（优先）
+async function getEventsAPI() {
+  try {
+    if (window.api) {
+      const events = await window.api.listEvents();
+      if (events && events.length > 0) {
+        // 同步到本地
+        saveEvents(events);
+        return events;
+      }
+    }
+  } catch (e) {
+    console.log('API获取失败，使用本地数据');
+  }
+  return getEvents();
+}
+
+async function saveEventAPI(eventData) {
+  try {
+    if (window.api) {
+      await window.api.createEvent(eventData);
+    }
+  } catch (e) {
+    console.log('API保存失败');
+  }
+  // 同时保存本地
+  const events = getEvents();
+  events.unshift(eventData);
+  saveEvents(events);
+}
 function getSettings()     { return DB.get('settings', { siteUrl: '', adminPwd: '' }); }
 function saveSettings_()   { DB.set('settings', getSettings()); }
 

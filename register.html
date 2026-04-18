@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>赛事报名 - 大金台球</title>
 <link rel="stylesheet" href="style.css">
+<script src="api-client.js"></script>
 <style>
 body { padding-top: 0; background: linear-gradient(135deg, #051a0d 0%, #0a2e1a 50%, #051a0d 100%); min-height: 100vh; }
 .register-header {
@@ -356,7 +357,7 @@ function typeLabel(type, custom) {
   return map[type] || type;
 }
 
-function submitRegister() {
+async function submitRegister() {
   const name = document.getElementById('player-name').value.trim();
   const phone = document.getElementById('player-phone').value.trim();
   const seed = document.getElementById('player-seed').value.trim();
@@ -378,30 +379,29 @@ function submitRegister() {
     source: 'online'
   };
 
-  // 尝试保存到localStorage（如果同设备）
+  // 提交到后端API（关键！让主办方能看到）
+  let apiSuccess = false;
+  try {
+    if (window.api) {
+      apiSuccess = await window.api.register(currentEvent.id, playerData);
+      if (apiSuccess) {
+        showToast('报名提交成功！');
+      }
+    }
+  } catch (e) {
+    console.log('API提交失败:', e);
+  }
+
+  // 同时保存到本地（作为备份）
   const events = getEvents();
   const evt = events.find(e => e.id === currentEvent.id);
   if (evt) {
-    // 检查是否已报名
     const exists = evt.players.find(p => p.phone === phone && p.name === name);
-    if (exists) { showToast('您已报名，请勿重复提交'); return; }
-    evt.players.push(playerData);
-    localStorage.setItem('daking_events', JSON.stringify(events));
+    if (!exists) {
+      evt.players.push(playerData);
+      localStorage.setItem('daking_events', JSON.stringify(events));
+    }
   }
-  
-  // 保存到专门的报名列表（用于主办方查看）
-  let registrations = [];
-  try {
-    const v = localStorage.getItem('daking_registrations');
-    if (v) registrations = JSON.parse(v);
-  } catch {}
-  registrations.push({
-    eventId: currentEvent.id,
-    eventName: currentEvent.name,
-    player: playerData,
-    submittedAt: Date.now()
-  });
-  localStorage.setItem('daking_registrations', JSON.stringify(registrations));
 
   // 显示成功
   document.getElementById('success-modal').style.display = 'flex';
