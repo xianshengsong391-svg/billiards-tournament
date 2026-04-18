@@ -472,41 +472,9 @@ function showRegisterQR() {
   const qcDiv = document.getElementById('register-qrcode');
   qcDiv.innerHTML = '';
 
-  const evt = getEventById(currentEventId);
-  if (!evt) { showToast('赛事数据异常'); return; }
-
   const settings = getSettings();
   const base = settings.siteUrl || (window.location.origin + (window.location.pathname.replace('index.html','')));
-  
-  // 只放核心数据，收款码等大数据不放（避免URL太长）
-  const eventData = {
-    id: evt.id,
-    name: evt.name,
-    type: evt.type,
-    customType: evt.customType,
-    date: evt.date,
-    location: evt.location,
-    fee: evt.fee,
-    rules: evt.rules,
-    stores: evt.stores
-    // 注意：wechatQR 和 alipayQR 是图片base64，太大不放这里
-  };
-  
-  // 压缩：去掉undefined，缩短key
-  const minData = {
-    i: evt.id,
-    n: evt.name,
-    t: evt.type,
-    c: evt.customType,
-    d: evt.date,
-    l: evt.location,
-    f: evt.fee,
-    r: evt.rules,
-    s: evt.stores
-  };
-  
-  const encodedData = encodeURIComponent(JSON.stringify(minData));
-  const url = base.replace(/\/$/, '') + '/register.html?eid=' + currentEventId + '&d=' + encodedData;
+  const url = base.replace(/\/$/, '') + '/register.html?eid=' + currentEventId;
 
   try {
     new QRCode(qcDiv, {
@@ -516,20 +484,12 @@ function showRegisterQR() {
       colorLight: '#050f0a',
       correctLevel: QRCode.CorrectLevel.M
     });
-    
-    // 显示URL提示
-    const urlTip = area.querySelector('.qr-tip');
-    if (urlTip) urlTip.textContent = '请让选手扫码报名';
-    
-    // 保存完整数据到localStorage，供同设备查看
-    localStorage.setItem('daking_event_' + evt.id, JSON.stringify({
-      wechatQR: evt.wechatQR,
-      alipayQR: evt.alipayQR
-    }));
-    
   } catch(e) {
-    qcDiv.innerHTML = `<div style="font-size:12px;color:var(--text-sub);word-break:break-all;padding:10px">二维码生成失败，请刷新重试</div>`;
+    qcDiv.innerHTML = `<div style="font-size:12px;color:var(--text-sub);word-break:break-all;padding:10px">${url}</div>`;
   }
+
+  const urlTip = area.querySelector('.qr-tip');
+  if (urlTip) urlTip.textContent = '报名链接：' + url;
 }
 
 function copyBracketLink() {
