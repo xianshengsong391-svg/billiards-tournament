@@ -679,6 +679,15 @@ function showRegisterQR() {
   }
 }
 
+function copyBracketLink() {
+  if (!currentEventId) { showToast('请先选择赛事'); return; }
+  const settings = getSettings();
+  const base = settings.siteUrl || (window.location.origin + window.location.pathname.replace('index.html',''));
+  const url = base.replace(/\/$/, '') + '/bracket.html?eid=' + currentEventId;
+  copyText(url);
+}
+
+function openBracketView() {
   if (!currentEventId) { showToast('请先选择赛事'); return; }
   window.open('bracket.html?eid=' + currentEventId, '_blank');
 }
