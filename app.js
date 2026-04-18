@@ -1220,7 +1220,28 @@ function loadSettingsUI() {
   const s = getSettings();
   document.getElementById('site-url').value = s.siteUrl || '';
   document.getElementById('admin-pwd').value = s.adminPwd || '';
+  renderSettingsLoginStatus();
 }
+
+// 渲染设置页面的登录状态
+function renderSettingsLoginStatus() {
+  const isLoggedIn = sessionStorage.getItem('adminLoggedIn') === 'true';
+  const container = document.getElementById('settings-login-status');
+  if (!container) return;
+  
+  if (isLoggedIn) {
+    container.innerHTML = `
+      <span style="color:var(--green)">✓ 已登录</span>
+      <button class="btn btn-sm btn-outline" onclick="doLogout()" style="margin-left:10px;">退出登录</button>
+    `;
+  } else {
+    container.innerHTML = `
+      <span style="color:var(--text-muted)">✗ 未登录</span>
+      <button class="btn btn-sm btn-primary" onclick="showPage('admin')" style="margin-left:10px;">去登录</button>
+    `;
+  }
+}
+
 
 function saveSettings() {
   const s = getSettings();
