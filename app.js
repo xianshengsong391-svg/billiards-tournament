@@ -639,8 +639,23 @@ function showRegisterQR() {
   const settings = getSettings();
   const base = settings.siteUrl || (window.location.origin + window.location.pathname.replace('index.html',''));
   
-  // 只传赛事ID，数据从后端或localStorage获取
-  const url = base.replace(/\/$/, '') + '/register.html?eid=' + currentEventId;
+  // 压缩赛事数据，用最短的key
+  const minData = {
+    i: evt.id,
+    n: evt.name,
+    t: evt.type,
+    c: evt.customType,
+    d: evt.date,
+    l: evt.location,
+    f: evt.fee,
+    r: evt.rules,
+    s: evt.stores
+  };
+  
+  // 使用更短的编码方式
+  const jsonStr = JSON.stringify(minData);
+  const encodedData = btoa(encodeURIComponent(jsonStr)).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+  const url = base.replace(/\/$/, '') + '/register.html?eid=' + currentEventId + '&d=' + encodedData;
 
   try {
     // 检查QRCode是否可用
@@ -662,7 +677,7 @@ function showRegisterQR() {
     
   } catch(e) {
     console.error('二维码生成失败:', e);
-    qcDiv.innerHTML = `<div style="font-size:12px;color:var(--text-sub);word-break:break-all;padding:10px">二维码生成失败: ${e.message}<br>请刷新页面重试</div>`;
+    qcDiv.innerHTML = `<div style="font-size:12px;color:var(--text-sub);word-break:break-all;padding:10px">二维码生成失败: ${e.message}<br>请缩短赛事名称/规则后重试</div>`;
   }
 }
 
