@@ -269,7 +269,7 @@ window.addEventListener('DOMContentLoaded', () => {
     return;
   }
   
-  // 先从localStorage查找
+   // 先从localStorage查找
   const events = getEvents();
   const evt = events.find(e => e.id === eid);
   if (evt) {
@@ -278,9 +278,29 @@ window.addEventListener('DOMContentLoaded', () => {
     return;
   }
   
-  // 如果localStorage没有，显示错误（选手和主办方不在同一设备）
-  showError('赛事不存在或已删除\n\n提示：请确保使用最新的报名二维码');
+  // 如果localStorage没有，尝试从API获取
+  loadEventFromAPI(eid);
 });
+
+// 从API加载赛事数据
+async function loadEventFromAPI(eid) {
+  try {
+    if (window.api && window.api.getEvent) {
+      const evt = await window.api.getEvent(eid);
+      if (evt) {
+        currentEvent = evt;
+        renderEvent();
+        return;
+      }
+    }
+    // API也获取不到，显示错误
+    showError('赛事不存在或已删除\n\n提示：请确保使用最新的报名二维码');
+  } catch (e) {
+    console.error('API获取赛事失败:', e);
+    showError('赛事不存在或已删除\n\n提示：请确保使用最新的报名二维码');
+  }
+}
+
 
 function showError(msg) {
   document.getElementById('loading').style.display = 'none';
