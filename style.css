@@ -555,3 +555,84 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   border: 1px solid var(--green-border); border-radius: 8px;
   cursor: pointer; font-size: 14px;
 }
+
+/* ===== 历史战绩 - 已结束赛事卡片 ===== */
+.ended-card {
+  background: linear-gradient(135deg, var(--bg-card) 0%, #0d1a12 100%);
+  border: 1px solid var(--border);
+}
+.ended-card::before {
+  background: var(--text-muted);
+  box-shadow: none;
+}
+.ended-card:hover {
+  border-color: var(--green-border);
+  box-shadow: var(--shadow);
+}
+.champion-banner {
+  background: linear-gradient(90deg, rgba(255,215,0,0.1) 0%, rgba(255,215,0,0.05) 100%);
+  border: 1px solid rgba(255,215,0,0.3);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin: 10px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.champion-crown {
+  font-size: 20px;
+}
+.champion-text {
+  font-size: 14px;
+  color: var(--yellow);
+  font-weight: 700;
+}
+.view-bracket-hint {
+  font-size: 12px;
+  color: var(--green);
+  text-align: center;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border);
+}
+
+/* ===== 历史战绩详情页 ===== */
+.champion-display {
+  background: linear-gradient(135deg, rgba(255,215,0,0.15) 0%, rgba(255,215,0,0.05) 100%);
+  border: 2px solid rgba(255,215,0,0.4);
+  border-radius: 16px;
+  padding: 20px;
+  margin: 16px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  box-shadow: 0 0 30px rgba(255,215,0,0.1);
+}
+.champion-trophy {
+  font-size: 48px;
+  filter: drop-shadow(0 0 10px rgba(255,215,0,0.5));
+}
+.champion-info {
+  text-align: center;
+}
+.champion-label {
+  font-size: 12px;
+  color: var(--yellow);
+  opacity: 0.8;
+  margin-bottom: 4px;
+  letter-spacing: 2px;
+}
+.champion-name {
+  font-size: 24px;
+  font-weight: 900;
+  color: var(--yellow);
+  text-shadow: 0 0 20px rgba(255,215,0,0.5);
+}
+.advancement-item.top-rank {
+  background: rgba(255,215,0,0.05);
+  border: 1px solid rgba(255,215,0,0.2);
+}
+.bracket-preview {
+  margin-top: 16px;
+}

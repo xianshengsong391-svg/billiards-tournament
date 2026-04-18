@@ -38,25 +38,14 @@ async function getEventsAPI() {
 async function saveEventAPI(eventData) {
   try {
     if (window.api) {
-      // 检查是新建还是更新
-      const existing = await window.api.getEvent(eventData.id);
-      if (existing) {
-        await window.api.updateEvent(eventData);
-      } else {
-        await window.api.createEvent(eventData);
-      }
+      await window.api.createEvent(eventData);
     }
   } catch (e) {
-    console.log('API保存失败:', e);
+    console.log('API保存失败');
   }
   // 同时保存本地
   const events = getEvents();
-  const idx = events.findIndex(e => e.id === eventData.id);
-  if (idx >= 0) {
-    events[idx] = eventData;
-  } else {
-    events.unshift(eventData);
-  }
+  events.unshift(eventData);
   saveEvents(events);
 }
 function getSettings()     { return DB.get('settings', { siteUrl: '', adminPwd: '' }); }
@@ -143,7 +132,6 @@ function switchAdminTab(tab) {
 function renderHome() {
   const events = getEvents();
   const active = events.filter(e => e.status === 'active');
-  const ended = events.filter(e => e.status === 'ended');
 
   // 进行中赛事
   const el = document.getElementById('active-events-list');
@@ -151,16 +139,6 @@ function renderHome() {
     el.innerHTML = '<div class="empty-tip">暂无进行中的赛事，<a onclick="showPage(\'admin\');switchAdminTab(\'create\')">去创建</a></div>';
   } else {
     el.innerHTML = active.map(e => eventCardHTML(e)).join('');
-  }
-
-  // 历史战绩（已结束赛事）
-  const endedEl = document.getElementById('ended-events-list');
-  if (ended.length === 0) {
-    endedEl.innerHTML = '<div class="empty-tip">暂无已结束的赛事</div>';
-  } else {
-    // 按结束时间倒序排列
-    const sortedEnded = ended.sort((a, b) => (b.endedAt || 0) - (a.endedAt || 0));
-    endedEl.innerHTML = sortedEnded.map(e => endedEventCardHTML(e)).join('');
   }
 
   // 全局统计
@@ -195,47 +173,6 @@ function eventCardHTML(e) {
       <div class="event-stat"><div class="event-stat-num">${doneM}</div><div class="event-stat-label">已完赛</div></div>
       <div class="event-stat"><div class="event-stat-num">${totalM - doneM}</div><div class="event-stat-label">待完赛</div></div>
     </div>
-  </div>`;
-}
-
-// 已结束赛事卡片（带冠军展示）
-function endedEventCardHTML(e) {
-  const approved = (e.players || []).filter(p => p.status === 'approved').length;
-  const totalM   = (e.matches || []).length;
-  const doneM    = (e.matches || []).filter(m => m.completed).length;
-  
-  // 查找冠军（最后一场比赛的胜者）
-  let champion = null;
-  if (e.matches && e.matches.length > 0) {
-    const finalMatch = e.matches.filter(m => m.completed).sort((a, b) => (b.completedAt || 0) - (a.completedAt || 0))[0];
-    if (finalMatch && finalMatch.winner) {
-      champion = finalMatch.winner;
-    }
-  }
-  
-  return `
-  <div class="event-card ended-card fadeIn" onclick="openEndedEventDetail('${e.id}')">
-    <div class="event-card-header">
-      <div class="event-card-name">${e.name}</div>
-      <span class="event-status status-ended">已结束</span>
-    </div>
-    <div class="event-card-meta">
-      <span class="meta-item">🎱 ${typeLabel(e.type, e.customType)}</span>
-      <span class="meta-item">📅 ${e.date || '待定'}</span>
-      <span class="meta-item">📍 ${e.location || '待定'}</span>
-    </div>
-    ${champion ? `
-    <div class="champion-banner">
-      <span class="champion-crown">👑</span>
-      <span class="champion-text">冠军：${champion}</span>
-    </div>
-    ` : ''}
-    <div class="event-card-stats">
-      <div class="event-stat"><div class="event-stat-num">${approved}</div><div class="event-stat-label">参赛选手</div></div>
-      <div class="event-stat"><div class="event-stat-num">${totalM}</div><div class="event-stat-label">总场次</div></div>
-      <div class="event-stat"><div class="event-stat-num">${doneM}</div><div class="event-stat-label">已完成</div></div>
-    </div>
-    <div class="view-bracket-hint">点击查看完整对阵表 →</div>
   </div>`;
 }
 
@@ -429,44 +366,20 @@ function updateEvent(updatedEvt) {
   if (idx >= 0) { events[idx] = updatedEvt; saveEvents(events); }
 }
 
-async function toggleEventStatus(id) {
+function toggleEventStatus(id) {
   const events = getEvents();
   const evt = events.find(e => e.id === id);
   if (!evt) return;
   evt.status = evt.status === 'active' ? 'ended' : 'active';
-  
-  // 记录结束时间
-  if (evt.status === 'ended') {
-    evt.endedAt = Date.now();
-  }
-  
   saveEvents(events);
-  
-  // 同步到后端
-  try {
-    await saveEventAPI(evt);
-  } catch (e) {
-    console.error('同步到后端失败:', e);
-  }
-  
   loadEventManage();
   showToast('赛事状态已更新');
 }
 
-async function deleteEvent(id) {
+function deleteEvent(id) {
   if (!confirm('确认删除这个赛事？此操作不可恢复！')) return;
   const events = getEvents().filter(e => e.id !== id);
   saveEvents(events);
-  
-  // 同步到后端
-  try {
-    if (window.api) {
-      await window.api.deleteEvent(id);
-    }
-  } catch (e) {
-    console.error('同步删除到后端失败:', e);
-  }
-  
   currentEventId = null;
   document.getElementById('manage-event-select').value = '';
   document.getElementById('event-manage-panel').style.display = 'none';
@@ -517,59 +430,35 @@ function renderPlayersList(evt) {
   }).join('');
 }
 
-async function approvePlayer(pid) {
+function approvePlayer(pid) {
   const events = getEvents();
   const evt = events.find(e => e.id === currentEventId);
   if (!evt) return;
   const p = evt.players.find(p => p.id === pid);
   if (p) p.status = 'approved';
   saveEvents(events);
-  
-  // 同步到后端
-  try {
-    await saveEventAPI(evt);
-  } catch (e) {
-    console.error('同步到后端失败:', e);
-  }
-  
   renderPlayersList(evt);
   showToast('已通过报名');
 }
 
-async function rejectPlayer(pid) {
+function rejectPlayer(pid) {
   const events = getEvents();
   const evt = events.find(e => e.id === currentEventId);
   if (!evt) return;
   const p = evt.players.find(p => p.id === pid);
   if (p) p.status = 'rejected';
   saveEvents(events);
-  
-  // 同步到后端
-  try {
-    await saveEventAPI(evt);
-  } catch (e) {
-    console.error('同步到后端失败:', e);
-  }
-  
   renderPlayersList(evt);
   showToast('已拒绝报名');
 }
 
-async function deletePlayer(pid) {
+function deletePlayer(pid) {
   if (!confirm('确认删除该选手？')) return;
   const events = getEvents();
   const evt = events.find(e => e.id === currentEventId);
   if (!evt) return;
   evt.players = evt.players.filter(p => p.id !== pid);
   saveEvents(events);
-  
-  // 同步到后端
-  try {
-    await saveEventAPI(evt);
-  } catch (e) {
-    console.error('同步到后端失败:', e);
-  }
-  
   renderPlayersList(evt);
   showToast('选手已删除');
 }
@@ -587,7 +476,7 @@ function showAddPlayerModal() {
   document.getElementById('modal-add-player').style.display = 'flex';
 }
 
-async function addPlayerManual() {
+function addPlayerManual() {
   const name = document.getElementById('add-player-name').value.trim();
   if (!name) { showToast('请填写选手姓名'); return; }
   const events = getEvents();
@@ -604,14 +493,6 @@ async function addPlayerManual() {
     source:  'manual'
   });
   saveEvents(events);
-  
-  // 同步到后端
-  try {
-    await saveEventAPI(evt);
-  } catch (e) {
-    console.error('同步到后端失败:', e);
-  }
-  
   closeModal('modal-add-player');
   renderPlayersList(evt);
   showToast('选手已添加');
@@ -1083,83 +964,6 @@ function openEventDetail(id) {
       }
     </div>
   </div>`;
-
-  showPage('event-detail');
-}
-
-// 打开已结束赛事详情（展示完整对阵表）
-function openEndedEventDetail(id) {
-  const evt = getEventById(id);
-  if (!evt) return;
-
-  document.getElementById('detail-event-name').textContent = evt.name + ' - 历史战绩';
-
-  const approved = (evt.players || []).filter(p => p.status === 'approved');
-  const totalM   = (evt.matches || []).length;
-  const doneM    = (evt.matches || []).filter(m => m.completed).length;
-
-  // 计算选手战绩
-  const stats = {};
-  approved.forEach(p => { stats[p.id] = { name: p.name, wins: 0, losses: 0 }; });
-  (evt.matches || []).filter(m => m.completed && !m.isBye).forEach(m => {
-    if (m.winner && stats[m.winner.pid]) stats[m.winner.pid].wins++;
-    if (m.loser  && stats[m.loser.pid])  stats[m.loser.pid].losses++;
-  });
-  const statList = Object.values(stats).sort((a, b) => b.wins - a.wins || a.losses - b.losses);
-
-  const champion = evt.bracket && evt.bracket.champion;
-  const endedDate = evt.endedAt ? new Date(evt.endedAt).toLocaleDateString('zh-CN') : '';
-
-  document.getElementById('event-detail-content').innerHTML = `
-  <div class="event-detail-header">
-    <div class="event-detail-name">${evt.name}</div>
-    <div class="event-detail-meta">
-      <span>🎱 ${typeLabel(evt.type, evt.customType)}</span>
-      <span>📅 ${evt.date || '待定'}</span>
-      <span>📍 ${evt.location || '待定'}</span>
-      ${endedDate ? `<span>🏁 结束于 ${endedDate}</span>` : ''}
-    </div>
-    ${champion ? `
-    <div class="champion-display">
-      <div class="champion-trophy">🏆</div>
-      <div class="champion-info">
-        <div class="champion-label">冠军</div>
-        <div class="champion-name">${champion.name}</div>
-      </div>
-    </div>` : ''}
-    <div class="event-detail-stats">
-      <div class="detail-stat"><div class="detail-stat-num">${approved.length}</div><div class="detail-stat-label">参赛选手</div></div>
-      <div class="detail-stat"><div class="detail-stat-num">${totalM}</div><div class="detail-stat-label">总场次</div></div>
-      <div class="detail-stat"><div class="detail-stat-num">${doneM}</div><div class="detail-stat-label">已完成</div></div>
-    </div>
-    <div class="btn-row">
-      <button class="btn btn-primary" onclick="window.open('bracket.html?eid=${evt.id}','_blank')">👁 查看完整对阵表</button>
-      <button class="btn btn-outline" onclick="showPage('home')">← 返回首页</button>
-    </div>
-  </div>
-
-  <div class="manage-section">
-    <h4>📊 最终排名</h4>
-    <div class="advancement-list">
-      ${statList.length === 0 ? '<div class="empty-tip">暂无比赛数据</div>' :
-        statList.map((s, i) => `
-        <div class="advancement-item ${i < 3 ? 'top-rank' : ''}">
-          <span class="advancement-rank">${i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i+1)+'.'}</span>
-          <span class="advancement-name">${s.name}</span>
-          <span class="advancement-stats">胜 ${s.wins} 负 ${s.losses}</span>
-        </div>`).join('')
-      }
-    </div>
-  </div>
-
-  ${evt.bracket ? `
-  <div class="manage-section">
-    <h4>🎯 对阵图表</h4>
-    <div class="bracket-preview">
-      <iframe src="bracket.html?eid=${evt.id}" style="width:100%;height:500px;border:1px solid var(--green-border);border-radius:8px;"></iframe>
-    </div>
-  </div>
-  ` : ''}`;
 
   showPage('event-detail');
 }
