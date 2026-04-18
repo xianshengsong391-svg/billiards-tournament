@@ -230,8 +230,17 @@ window.addEventListener('DOMContentLoaded', () => {
   // 优先从URL参数读取赛事数据（二维码包含的数据）
   if (dataParam) {
     try {
-      // 解析压缩格式 {i:id, n:name, t:type, c:customType, d:date, l:location, f:fee, r:rules, s:stores}
-      const minData = JSON.parse(decodeURIComponent(dataParam));
+      // 支持两种格式：旧版URL编码 和 新版Base64编码
+      let minData;
+      try {
+        // 尝试Base64解码（新版）
+        const base64 = dataParam.replace(/-/g, '+').replace(/_/g, '/') + '=='.substring(0, (3 - dataParam.length % 3) % 3);
+        minData = JSON.parse(decodeURIComponent(atob(base64)));
+      } catch {
+        // 回退到URL解码（旧版）
+        minData = JSON.parse(decodeURIComponent(dataParam));
+      }
+      
       currentEvent = {
         id: minData.i,
         name: minData.n,
@@ -269,7 +278,7 @@ window.addEventListener('DOMContentLoaded', () => {
     return;
   }
   
-   // 先从localStorage查找
+  // 先从localStorage查找
   const events = getEvents();
   const evt = events.find(e => e.id === eid);
   if (evt) {
@@ -300,7 +309,6 @@ async function loadEventFromAPI(eid) {
     showError('赛事不存在或已删除\n\n提示：请确保使用最新的报名二维码');
   }
 }
-
 
 function showError(msg) {
   document.getElementById('loading').style.display = 'none';
