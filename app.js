@@ -92,7 +92,6 @@ function doLogout() {
   showPage('home');
 }
 
-
 function showAdminPanel() {
   document.getElementById('admin-login-panel').style.display = 'none';
   document.getElementById('admin-content').style.display = 'block';
@@ -667,22 +666,6 @@ function showRegisterQR() {
   }
 }
 
-    
-    // 显示URL提示
-    const urlTip = area.querySelector('.qr-tip');
-    if (urlTip) urlTip.textContent = '请让选手扫码报名';
-    
-    // 保存完整数据到localStorage，供同设备查看
-    localStorage.setItem('daking_event_' + evt.id, JSON.stringify({
-      wechatQR: evt.wechatQR,
-      alipayQR: evt.alipayQR
-    }));
-    
-  } catch(e) {
-    qcDiv.innerHTML = `<div style="font-size:12px;color:var(--text-sub);word-break:break-all;padding:10px">二维码生成失败，请刷新重试</div>`;
-  }
-}
-
 function copyBracketLink() {
   if (!currentEventId) { showToast('请先选择赛事'); return; }
   const settings = getSettings();
@@ -1243,7 +1226,6 @@ function renderSettingsLoginStatus() {
     `;
   }
 }
-
 
 function saveSettings() {
   const s = getSettings();
