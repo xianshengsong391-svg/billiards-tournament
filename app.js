@@ -253,9 +253,14 @@ function createTournament() {
     createdAt:   Date.now()
   };
 
+  // 先保存到本地
   const events = getEvents();
   events.unshift(evt);
   saveEvents(events);
+  
+  // 同时保存到后端
+  saveEventAPI(evt).catch(err => console.error('保存到后端失败:', err));
+  
   showToast('赛事创建成功！');
 
   // 重置表单
@@ -1081,7 +1086,7 @@ function showToast(msg, dur = 2500) {
 // ───────────────────────────────────────────
 // 17. 初始化
 // ───────────────────────────────────────────
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
   console.log('App initialized');
   // 设置今天日期为默认
   const today = new Date().toISOString().split('T')[0];
@@ -1089,6 +1094,8 @@ window.addEventListener('DOMContentLoaded', () => {
   if (dateInput) dateInput.value = today;
 
   try {
+    // 优先从后端加载数据
+    await getEventsAPI();
     renderHome();
     refreshAdminSelects();
     console.log('App ready');
