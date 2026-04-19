@@ -309,19 +309,23 @@ async function loadEventFromAPI(eid) {
 }
 
 // 从API获取完整赛事数据（用于获取规则）
-async function loadEventFullData(eid) {
+function loadEventFullData(eid) {
   const API_BASE = 'https://billiards-api.xianshengsong391.workers.dev';
-  try {
-    const res = await fetch(`${API_BASE}?action=get&id=${encodeURIComponent(eid)}`);
-    if (!res.ok) throw new Error('网络错误');
-    const data = await res.json();
-    if (data.success && data.data) {
-      return data.data;
-    }
-  } catch (e) {
-    console.error('获取完整赛事数据失败:', e);
-  }
-  return null;
+  return fetch(API_BASE + '?action=get&id=' + encodeURIComponent(eid))
+    .then(function(res) {
+      if (!res.ok) throw new Error('网络错误');
+      return res.json();
+    })
+    .then(function(data) {
+      if (data.success && data.data) {
+        return data.data;
+      }
+      return null;
+    })
+    .catch(function(e) {
+      console.error('获取完整赛事数据失败:', e);
+      return null;
+    });
 }
 
 function showError(msg) {
@@ -353,25 +357,23 @@ function renderEvent() {
     // 二维码里没有规则，点击后从API获取
     rulesBtn.style.display = 'block';
     rulesBtn.textContent = '📋 查看赛事规则';
-    rulesBtn.onclick = async () => {
+    rulesBtn.onclick = function() {
       rulesBtn.textContent = '⏳ 加载中...';
       rulesBtn.disabled = true;
-      try {
-        console.log('开始加载规则，赛事ID:', evt.id);
-        const fullEvent = await loadEventFullData(evt.id);
-        console.log('API返回:', fullEvent);
+      
+      loadEventFullData(evt.id).then(function(fullEvent) {
         if (fullEvent && fullEvent.rules) {
           showRulesModal(fullEvent.rules);
         } else {
           showRulesModal('暂无赛事规则');
         }
-      } catch (err) {
+      }).catch(function(err) {
         console.error('加载规则失败:', err);
-        showRulesModal('加载失败: ' + (err.message || '网络错误'));
-      } finally {
+        showRulesModal('加载失败，请检查网络');
+      }).finally(function() {
         rulesBtn.textContent = '📋 查看赛事规则';
         rulesBtn.disabled = false;
-      }
+      });
     };
   }
 
