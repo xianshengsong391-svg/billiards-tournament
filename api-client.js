@@ -1,5 +1,5 @@
 // API 客户端 - 对接Vercel后端
-const API_BASE = 'https://billiards-tournament-two.vercel.app/api/events';
+const API_BASE = 'https://billiards-api.xianshengsong391.workers.dev';
 
 const api = {
   // 获取所有赛事
