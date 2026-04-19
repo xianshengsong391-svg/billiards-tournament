@@ -225,88 +225,41 @@ let selectedStore = '';
 // 初始化
 window.addEventListener('DOMContentLoaded', () => {
   const eid = getParam('eid');
-  const dataParam = getParam('d'); // 压缩后的数据参数
-  
-  // 优先从URL参数读取赛事数据（二维码包含的数据）
-  if (dataParam) {
-    try {
-      // 支持两种格式：旧版URL编码 和 新版Base64编码
-      let minData;
-      try {
-        // 尝试Base64解码（新版）
-        const base64 = dataParam.replace(/-/g, '+').replace(/_/g, '/') + '=='.substring(0, (3 - dataParam.length % 3) % 3);
-        minData = JSON.parse(decodeURIComponent(atob(base64)));
-      } catch {
-        // 回退到URL解码（旧版）
-        minData = JSON.parse(decodeURIComponent(dataParam));
-      }
-      
-      currentEvent = {
-        id: minData.i,
-        name: minData.n,
-        type: minData.t,
-        customType: minData.c,
-        date: minData.d,
-        location: minData.l,
-        fee: minData.f,
-        rules: minData.r,
-        stores: minData.s,
-        wechatQR: '',
-        alipayQR: ''
-      };
-      
-      // 尝试从localStorage获取收款码（如果同设备）
-      try {
-        const extra = localStorage.getItem('daking_event_' + currentEvent.id);
-        if (extra) {
-          const extraData = JSON.parse(extra);
-          currentEvent.wechatQR = extraData.wechatQR || '';
-          currentEvent.alipayQR = extraData.alipayQR || '';
-        }
-      } catch {}
-      
-      renderEvent();
-      return;
-    } catch (e) {
-      console.error('解析赛事数据失败:', e);
-    }
-  }
-  
-  // 如果没有data参数，尝试从localStorage读取（同一设备）
+
   if (!eid) {
-    showError('缺少赛事ID，请使用正确的报名链接\n\n提示：先在后台创建赛事才能报名');
+    showError('缺少赛事ID，请使用正确的报名链接');
     return;
   }
-  
-  // 先从localStorage查找
+
+  // 先尝试从 localStorage 获取（同设备，响应最快）
   const events = getEvents();
-  const evt = events.find(e => e.id === eid);
-  if (evt) {
-    currentEvent = evt;
+  const localEvt = events.find(e => e.id === eid);
+  if (localEvt) {
+    currentEvent = localEvt;
     renderEvent();
     return;
   }
-  
-  // 如果localStorage没有，尝试从API获取
+
+  // 再从后端 API（GitHub Gist）获取（跨设备）
   loadEventFromAPI(eid);
 });
 
-// 从API加载赛事数据
+// 从API加载赛事数据（GitHub Gist 后端持久化）
 async function loadEventFromAPI(eid) {
+  const API_BASE = 'https://billiards-tournament-two.vercel.app/api/events';
   try {
-    if (window.api && window.api.getEvent) {
-      const evt = await window.api.getEvent(eid);
-      if (evt) {
-        currentEvent = evt;
-        renderEvent();
-        return;
-      }
+    const res = await fetch(`${API_BASE}?action=get&id=${encodeURIComponent(eid)}`);
+    if (!res.ok) throw new Error('网络错误');
+    const data = await res.json();
+    if (data.success && data.data) {
+      currentEvent = data.data;
+      renderEvent();
+      return;
     }
-    // API也获取不到，显示错误
     showError('赛事不存在或已删除\n\n提示：请确保使用最新的报名二维码');
   } catch (e) {
     console.error('API获取赛事失败:', e);
-    showError('赛事不存在或已删除\n\n提示：请确保使用最新的报名二维码');
+    showError('无法加载赛事数据，请检查网络连接后重试');
   }
 }
 
