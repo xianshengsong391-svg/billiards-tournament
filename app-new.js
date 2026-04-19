@@ -511,9 +511,9 @@ function showRegisterQR() {
   const evt = getEventById(currentEventId);
   if (!evt) { showToast('赛事数据异常'); return; }
 
-  const settings = getSettings();
-  const base = settings.siteUrl || (window.location.origin + (window.location.pathname.replace('index.html','')));
-  
+  const base = 'https://billiards-tournament.pages.dev';
+
+   
   // 只放核心数据，收款码等大数据不放（避免URL太长）
   // 压缩：用短key
   const minData = {
