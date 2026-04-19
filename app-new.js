@@ -376,8 +376,19 @@ function toggleEventStatus(id) {
   showToast('赛事状态已更新');
 }
 
-function deleteEvent(id) {
+async function deleteEvent(id) {
   if (!confirm('确认删除这个赛事？此操作不可恢复！')) return;
+  
+  // 先调用API删除后端数据
+  try {
+    if (window.api && window.api.deleteEvent) {
+      await window.api.deleteEvent(id);
+    }
+  } catch (e) {
+    console.log('API删除失败:', e);
+  }
+  
+  // 再删除本地数据
   const events = getEvents().filter(e => e.id !== id);
   saveEvents(events);
   currentEventId = null;
@@ -386,6 +397,7 @@ function deleteEvent(id) {
   refreshManageSelect();
   showToast('赛事已删除');
 }
+
 
 // ───────────────────────────────────────────
 // 8. 选手管理
