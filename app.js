@@ -68,14 +68,34 @@ function isAdminLoggedIn() {
   return sessionStorage.getItem('adminLoggedIn') === 'true';
 }
 
-// 检查是否设置了密码
-function hasAdminPassword() {
+// 检查后端是否设置了密码（异步）
+async function hasAdminPassword() {
+  if (window.api && window.api.hasPassword) {
+    return await window.api.hasPassword();
+  }
+  // 降级：检查本地缓存
   const settings = getSettings();
   return !!settings.adminPwd;
 }
 
-function doLogin() {
+async function doLogin() {
   const pwd = document.getElementById('login-password').value.trim();
+  
+  // 先尝试后端验证
+  if (window.api && window.api.checkPassword) {
+    const valid = await window.api.checkPassword(pwd);
+    if (valid) {
+      sessionStorage.setItem('adminLoggedIn', 'true');
+      // 缓存密码到本地（用于离线情况）
+      const settings = getSettings();
+      settings.adminPwd = pwd;
+      DB.set('settings', settings);
+      showAdminPanel();
+      return;
+    }
+  }
+  
+  // 降级：本地验证
   const settings = getSettings();
   if (pwd === settings.adminPwd) {
     sessionStorage.setItem('adminLoggedIn', 'true');
@@ -113,9 +133,11 @@ function updateCreateEventButton() {
   }
 }
 
-function checkAdminLogin() {
+async function checkAdminLogin() {
+  const hasPwd = await hasAdminPassword();
+  
   // 检查是否设置了密码
-  if (!hasAdminPassword()) {
+  if (!hasPwd) {
     document.getElementById('admin-login-panel').style.display = 'flex';
     document.getElementById('admin-content').style.display = 'none';
     document.querySelector('.login-box h2').textContent = '🔐 首次使用';
@@ -125,12 +147,21 @@ function checkAdminLogin() {
     // 修改登录按钮为设置密码
     const loginBtn = document.querySelector('.login-box .btn-primary');
     loginBtn.textContent = '设置密码';
-    loginBtn.onclick = function() {
+    loginBtn.onclick = async function() {
       const pwd = document.getElementById('login-password').value.trim();
       if (pwd.length < 4) {
         document.getElementById('login-error').textContent = '密码至少4位';
         return;
       }
+      // 保存到后端
+      if (window.api && window.api.setPassword) {
+        const ok = await window.api.setPassword(pwd);
+        if (!ok) {
+          document.getElementById('login-error').textContent = '密码设置失败，请重试';
+          return;
+        }
+      }
+      // 同时保存到本地作为缓存
       const settings = getSettings();
       settings.adminPwd = pwd;
       DB.set('settings', settings);
@@ -150,7 +181,7 @@ function checkAdminLogin() {
     document.querySelector('.login-box h2').textContent = '🔐 后台管理登录';
     document.querySelector('.login-box .login-sub').textContent = '大金台球棋牌连锁 · 赛事管理系统';
     document.getElementById('login-password').placeholder = '请输入密码';
-    document.querySelector('.login-hint').textContent = '首次使用请在系统设置中设置密码';
+    document.querySelector('.login-hint').textContent = '请输入管理员密码';
     const loginBtn = document.querySelector('.login-box .btn-primary');
     loginBtn.textContent = '登录';
     loginBtn.onclick = doLogin;
@@ -168,7 +199,7 @@ let scoreEditMatchId = null;
 // ───────────────────────────────────────────
 // 2. 页面路由
 // ───────────────────────────────────────────
-function showPage(name) {
+async function showPage(name) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   const p = document.getElementById('page-' + name);
@@ -181,7 +212,7 @@ function showPage(name) {
 
   if (name === 'home')   renderHome();
   if (name === 'events') renderEventsList();
-  if (name === 'admin')  checkAdminLogin();
+  if (name === 'admin')  await checkAdminLogin();
 }
 
 function switchAdminTab(tab) {
