@@ -638,46 +638,29 @@ function showRegisterQR() {
 
   const settings = getSettings();
   const base = settings.siteUrl || (window.location.origin + window.location.pathname.replace('index.html',''));
-  
-  // 压缩赛事数据，用最短的key
-  const minData = {
-    i: evt.id,
-    n: evt.name,
-    t: evt.type,
-    c: evt.customType,
-    d: evt.date,
-    l: evt.location,
-    f: evt.fee,
-    r: evt.rules,
-    s: evt.stores
-  };
-  
-  // 使用更短的编码方式
-  const jsonStr = JSON.stringify(minData);
-  const encodedData = btoa(encodeURIComponent(jsonStr)).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
-  const url = base.replace(/\/$/, '') + '/register.html?eid=' + currentEventId + '&d=' + encodedData;
+
+  // 只传赛事ID，数据由后端(Gist)提供，二维码保持简洁
+  const url = base.replace(/\/$/, '') + '/register.html?eid=' + currentEventId;
 
   try {
-    // 检查QRCode是否可用
     if (typeof QRCode === 'undefined') {
       throw new Error('QRCode库未加载');
     }
-    
+
     new QRCode(qcDiv, {
       text: url,
-      width: 200, height: 200,
+      width: 220, height: 220,
       colorDark: '#00ff88',
       colorLight: '#050f0a',
       correctLevel: QRCode.CorrectLevel.L
     });
-    
-    // 显示URL提示
+
     const urlTip = area.querySelector('.qr-tip');
     if (urlTip) urlTip.textContent = '请让选手扫码报名';
-    
+
   } catch(e) {
     console.error('二维码生成失败:', e);
-    qcDiv.innerHTML = `<div style="font-size:12px;color:var(--text-sub);word-break:break-all;padding:10px">二维码生成失败: ${e.message}<br>请缩短赛事名称/规则后重试</div>`;
+    qcDiv.innerHTML = `<div style="font-size:12px;color:var(--text-sub);word-break:break-all;padding:10px">二维码生成失败: ${e.message}<br>请刷新页面重试</div>`;
   }
 }
 
