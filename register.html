@@ -35,7 +35,6 @@ body { padding-top: 0; background: linear-gradient(135deg, #051a0d 0%, #0a2e1a 5
 .event-fee-box .fee-label { font-size: 12px; color: var(--text-sub); }
 .event-fee-box .fee-num { font-size: 32px; font-weight: 900; color: var(--green); text-shadow: 0 0 15px var(--green); }
 .event-fee-box .fee-unit { font-size: 14px; color: var(--text-sub); }
-.event-rules-box { background: var(--bg-input); border-radius: 10px; padding: 12px; font-size: 13px; color: var(--text-sub); line-height: 1.6; }
 .form-section { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 20px; margin-bottom: 16px; }
 .form-section h3 { font-size: 15px; color: var(--green); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
 .form-section h3::before { content: ''; width: 4px; height: 16px; background: var(--green); border-radius: 2px; }
@@ -102,6 +101,13 @@ body { padding-top: 0; background: linear-gradient(135deg, #051a0d 0%, #0a2e1a 5
 .error-box h3 { color: var(--red); font-size: 18px; margin-bottom: 8px; }
 .error-box p { color: var(--text-sub); font-size: 14px; margin-bottom: 16px; }
 .error-box .btn { padding: 10px 20px; }
+.view-rules-btn {
+  width: 100%; padding: 12px; background: var(--bg-input);
+  border: 1px solid var(--green-border); border-radius: 10px;
+  color: var(--green); font-size: 14px; cursor: pointer;
+  margin-top: 12px; transition: all 0.2s;
+}
+.view-rules-btn:hover { background: var(--green-dim); box-shadow: 0 0 15px var(--green-dim); }
 </style>
 </head>
 <body>
@@ -144,10 +150,10 @@ body { padding-top: 0; background: linear-gradient(135deg, #051a0d 0%, #0a2e1a 5
         <div class="fee-num" id="event-fee">--</div>
         <div class="fee-unit">元/人</div>
       </div>
-      <div class="event-rules-box" id="event-rules" style="display:none">
-        <strong style="color:var(--green)">📋 赛事规则</strong><br>
-        <span id="rules-text">--</span>
-      </div>
+      <!-- 查看规则按钮 -->
+      <button id="view-rules-btn" class="view-rules-btn" style="display:none" onclick="showRulesModal()">
+        📋 查看赛事规则
+      </button>
     </div>
 
     <!-- 报名表单 -->
@@ -203,6 +209,20 @@ body { padding-top: 0; background: linear-gradient(135deg, #051a0d 0%, #0a2e1a 5
       请留意手机通知，或关注对阵表更新。
     </div>
     <button class="success-btn" onclick="closeSuccess()">知道了</button>
+  </div>
+</div>
+
+<!-- 规则弹窗 -->
+<div id="rules-modal" class="success-modal" style="display:none" onclick="if(event.target===this)closeRulesModal()">
+  <div class="success-box" style="max-width:400px;text-align:left;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <div class="success-title" style="margin:0;">📋 赛事规则</div>
+      <button onclick="closeRulesModal()" style="background:none;border:none;color:var(--text-sub);font-size:20px;cursor:pointer;">×</button>
+    </div>
+    <div id="rules-modal-content" style="color:var(--text-sub);font-size:14px;line-height:1.8;max-height:60vh;overflow-y:auto;">
+      --
+    </div>
+    <button class="success-btn" onclick="closeRulesModal()" style="margin-top:20px;">知道了</button>
   </div>
 </div>
 
@@ -306,9 +326,13 @@ function renderEvent() {
   document.getElementById('event-location').textContent = '📍 ' + (evt.location || '待定');
   document.getElementById('event-fee').textContent = evt.fee || 0;
 
-  if (evt.rules) {
-    document.getElementById('event-rules').style.display = 'block';
-    document.getElementById('rules-text').textContent = evt.rules;
+  // 显示/隐藏查看规则按钮
+  const rulesBtn = document.getElementById('view-rules-btn');
+  if (evt.rules && evt.rules.trim()) {
+    rulesBtn.style.display = 'block';
+    rulesBtn.onclick = () => showRulesModal(evt.rules);
+  } else {
+    rulesBtn.style.display = 'none';
   }
 
   // 门店选择
@@ -419,6 +443,15 @@ function closeSuccess() {
   document.getElementById('player-name').value = '';
   document.getElementById('player-phone').value = '';
   document.getElementById('player-seed').value = '';
+}
+
+function showRulesModal(rules) {
+  document.getElementById('rules-modal-content').textContent = rules || '暂无规则';
+  document.getElementById('rules-modal').style.display = 'flex';
+}
+
+function closeRulesModal() {
+  document.getElementById('rules-modal').style.display = 'none';
 }
 
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
