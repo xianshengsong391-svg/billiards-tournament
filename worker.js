@@ -27,13 +27,17 @@ async function loadFromGist(env) {
     if (!res.ok) throw new Error(`Gist fetch failed: ${res.status}`);
 
     const gist = await res.json();
-    const content = gist.files['data.json']?.content || '{"events":[],"registrations":[]}';
+    const content = gist.files['data.json']?.content || '{"events":[],"registrations":[],"adminPwd":""}';
     memoryCache = JSON.parse(content);
+    // 确保有 adminPwd 字段
+    if (!memoryCache.hasOwnProperty('adminPwd')) {
+      memoryCache.adminPwd = '';
+    }
     lastLoadTime = now;
     return memoryCache;
   } catch (e) {
     console.error('loadFromGist error:', e);
-    return { events: [], registrations: [] };
+    return { events: [], registrations: [], adminPwd: '' };
   }
 }
 
@@ -97,7 +101,7 @@ export default {
     const action = url.searchParams.get('action');
 
     try {
-      let { events, registrations } = await loadFromGist(env);
+      let { events, registrations, adminPwd } = await loadFromGist(env);
 
       switch (action) {
         case 'list':
@@ -115,11 +119,45 @@ export default {
           );
         }
 
+        // 密码管理
+        case 'getPassword': {
+          // 返回是否已设置密码（不返回密码本身）
+          return new Response(
+            JSON.stringify({ success: true, hasPassword: !!adminPwd }),
+            { headers: corsHeaders() }
+          );
+        }
+
+        case 'setPassword': {
+          const { password } = await request.json();
+          if (!password || password.length < 4) {
+            return new Response(
+              JSON.stringify({ success: false, error: '密码至少4位' }),
+              { headers: corsHeaders() }
+            );
+          }
+          adminPwd = password;
+          await saveToGist({ events, registrations, adminPwd }, env);
+          return new Response(
+            JSON.stringify({ success: true }),
+            { headers: corsHeaders() }
+          );
+        }
+
+        case 'checkPassword': {
+          const { password } = await request.json();
+          const valid = (password === adminPwd);
+          return new Response(
+            JSON.stringify({ success: true, valid }),
+            { headers: corsHeaders() }
+          );
+        }
+
         case 'create': {
           const newEvent = await request.json();
           newEvent.createdAt = Date.now();
           events.push(newEvent);
-          await saveToGist({ events, registrations }, env);
+          await saveToGist({ events, registrations, adminPwd }, env);
           return new Response(
             JSON.stringify({ success: true, data: newEvent }),
             { headers: corsHeaders() }
@@ -131,7 +169,7 @@ export default {
           const idx = events.findIndex(e => e.id === updateData.id);
           if (idx >= 0) {
             events[idx] = { ...events[idx], ...updateData };
-            await saveToGist({ events, registrations }, env);
+            await saveToGist({ events, registrations, adminPwd }, env);
             return new Response(
               JSON.stringify({ success: true, data: events[idx] }),
               { headers: corsHeaders() }
@@ -146,7 +184,7 @@ export default {
         case 'delete': {
           const id = url.searchParams.get('id');
           events = events.filter(e => e.id !== id);
-          await saveToGist({ events, registrations }, env);
+          await saveToGist({ events, registrations, adminPwd }, env);
           return new Response(
             JSON.stringify({ success: true }),
             { headers: corsHeaders() }
@@ -165,7 +203,7 @@ export default {
             evt.players.push(reg.player);
           }
 
-          await saveToGist({ events, registrations }, env);
+          await saveToGist({ events, registrations, adminPwd }, env);
           return new Response(
             JSON.stringify({ success: true, data: reg }),
             { headers: corsHeaders() }
