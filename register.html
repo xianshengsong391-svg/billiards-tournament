@@ -245,13 +245,38 @@ let selectedStore = '';
 // 初始化
 window.addEventListener('DOMContentLoaded', function() {
   const eid = getParam('eid');
+  const d = getParam('d');
 
   if (!eid) {
     showError('缺少赛事ID，请使用正确的报名链接');
     return;
   }
 
-  // 直接从 API 获取完整数据（包括规则）
+  // 优先从二维码数据解析（兼容移动端）
+  if (d) {
+    try {
+      const decoded = JSON.parse(decodeURIComponent(d));
+      currentEvent = {
+        id: decoded.i || eid,
+        name: decoded.n,
+        type: decoded.t,
+        customType: decoded.c,
+        date: decoded.d,
+        location: decoded.l,
+        fee: decoded.f,
+        stores: decoded.s,
+        wechatQR: decoded.w,
+        alipayQR: decoded.a,
+        rules: '' // 规则从API获取或显示提示
+      };
+      renderEvent();
+      return;
+    } catch (e) {
+      console.log('解析二维码数据失败:', e);
+    }
+  }
+
+  // 备用：从API获取
   loadEventFromAPI(eid);
 });
 
@@ -308,6 +333,43 @@ function showError(msg) {
   document.getElementById('error-msg').textContent = msg;
 }
 
+// 专门用于获取规则的函数（带提示）
+function loadEventFromAPIForRules(eid) {
+  var xhr = new XMLHttpRequest();
+  xhr.timeout = 10000;
+  
+  xhr.onreadystatechange = function() {
+    if (xhr.readyState === 4) {
+      if (xhr.status === 200) {
+        try {
+          var data = JSON.parse(xhr.responseText);
+          if (data.success && data.data && data.data.rules) {
+            showRulesModal(data.data.rules);
+          } else {
+            showRulesModal('暂无赛事规则，请咨询主办方');
+          }
+        } catch (e) {
+          showRulesModal('暂无赛事规则，请咨询主办方');
+        }
+      } else {
+        showRulesModal('暂无赛事规则，请咨询主办方');
+      }
+    }
+  };
+  
+  xhr.ontimeout = function() {
+    showRulesModal('暂无赛事规则，请咨询主办方');
+  };
+  
+  xhr.onerror = function() {
+    showRulesModal('暂无赛事规则，请咨询主办方');
+  };
+  
+  xhr.open('GET', 'https://billiards-api.xianshengsong391.workers.dev?action=get&id=' + encodeURIComponent(eid), true);
+  xhr.setRequestHeader('Accept', 'application/json');
+  xhr.send();
+}
+
 function renderEvent() {
   const evt = currentEvent;
   document.getElementById('loading').style.display = 'none';
@@ -320,17 +382,19 @@ function renderEvent() {
   document.getElementById('event-location').textContent = '📍 ' + (evt.location || '待定');
   document.getElementById('event-fee').textContent = evt.fee || 0;
 
-  // 显示/隐藏查看规则按钮（数据已从API加载，直接显示）
+  // 显示/隐藏查看规则按钮
   const rulesBtn = document.getElementById('view-rules-btn');
-  if (evt.rules && evt.rules.trim()) {
-    rulesBtn.style.display = 'block';
-    rulesBtn.textContent = '📋 查看赛事规则';
-    rulesBtn.onclick = function() {
+  rulesBtn.style.display = 'block';
+  rulesBtn.textContent = '📋 查看赛事规则';
+  rulesBtn.onclick = function() {
+    // 尝试从API获取规则，失败则显示提示
+    if (evt.rules && evt.rules.trim()) {
       showRulesModal(evt.rules);
-    };
-  } else {
-    rulesBtn.style.display = 'none';
-  }
+    } else {
+      // 尝试从API加载规则
+      loadEventFromAPIForRules(evt.id);
+    }
+  };
 
   // 门店选择
   const stores = evt.stores && evt.stores.length > 0 ? evt.stores : ['韩家墅店','青光店','王庆坨店'];
