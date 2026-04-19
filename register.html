@@ -356,14 +356,22 @@ function renderEvent() {
     rulesBtn.onclick = async () => {
       rulesBtn.textContent = '⏳ 加载中...';
       rulesBtn.disabled = true;
-      const fullEvent = await loadEventFullData(evt.id);
-      if (fullEvent && fullEvent.rules) {
-        showRulesModal(fullEvent.rules);
-      } else {
-        showRulesModal('暂无赛事规则');
+      try {
+        console.log('开始加载规则，赛事ID:', evt.id);
+        const fullEvent = await loadEventFullData(evt.id);
+        console.log('API返回:', fullEvent);
+        if (fullEvent && fullEvent.rules) {
+          showRulesModal(fullEvent.rules);
+        } else {
+          showRulesModal('暂无赛事规则');
+        }
+      } catch (err) {
+        console.error('加载规则失败:', err);
+        showRulesModal('加载失败: ' + (err.message || '网络错误'));
+      } finally {
+        rulesBtn.textContent = '📋 查看赛事规则';
+        rulesBtn.disabled = false;
       }
-      rulesBtn.textContent = '📋 查看赛事规则';
-      rulesBtn.disabled = false;
     };
   }
 
