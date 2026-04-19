@@ -536,7 +536,6 @@ function showRegisterQR() {
     d: evt.date,
     l: evt.location,
     f: evt.fee,
-    r: evt.rules,
     s: evt.stores
   };
   
