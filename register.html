@@ -256,22 +256,48 @@ window.addEventListener('DOMContentLoaded', function() {
 });
 
 // 从API加载赛事数据（GitHub Gist 后端持久化）
-async function loadEventFromAPI(eid) {
+function loadEventFromAPI(eid) {
   const API_BASE = 'https://billiards-api.xianshengsong391.workers.dev';
-  try {
-    const res = await fetch(`${API_BASE}?action=get&id=${encodeURIComponent(eid)}`);
-    if (!res.ok) throw new Error('网络错误');
-    const data = await res.json();
-    if (data.success && data.data) {
-      currentEvent = data.data;
-      renderEvent();
-      return;
+  const url = API_BASE + '?action=get&id=' + encodeURIComponent(eid);
+  
+  var xhr = new XMLHttpRequest();
+  xhr.timeout = 15000; // 15秒超时
+  
+  xhr.onreadystatechange = function() {
+    if (xhr.readyState === 4) {
+      if (xhr.status === 200) {
+        try {
+          var data = JSON.parse(xhr.responseText);
+          if (data.success && data.data) {
+            currentEvent = data.data;
+            renderEvent();
+          } else {
+            showError('赛事不存在或已删除\n\n提示：请确保使用最新的报名二维码');
+          }
+        } catch (e) {
+          console.error('解析失败:', e);
+          showError('数据解析失败，请稍后重试');
+        }
+      } else {
+        console.error('请求失败:', xhr.status);
+        showError('无法加载赛事数据，请检查网络连接后重试');
+      }
     }
-    showError('赛事不存在或已删除\n\n提示：请确保使用最新的报名二维码');
-  } catch (e) {
-    console.error('API获取赛事失败:', e);
-    showError('无法加载赛事数据，请检查网络连接后重试');
-  }
+  };
+  
+  xhr.ontimeout = function() {
+    console.error('请求超时');
+    showError('加载超时，请检查网络后重试');
+  };
+  
+  xhr.onerror = function() {
+    console.error('网络错误');
+    showError('网络错误，请检查网络连接后重试');
+  };
+  
+  xhr.open('GET', url, true);
+  xhr.setRequestHeader('Accept', 'application/json');
+  xhr.send();
 }
 
 
