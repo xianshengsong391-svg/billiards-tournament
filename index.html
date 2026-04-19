@@ -51,7 +51,7 @@
       <button class="btn-sm btn-primary" onclick="showPage('events')">全部赛事 →</button>
     </div>
     <div id="active-events-list">
-      <div class="empty-tip">暂无进行中的赛事，<a onclick="showPage('admin');switchAdminTab('create')">去创建</a></div>
+      <div class="empty-tip">暂无进行中的赛事</div>
     </div>
   </div>
 
@@ -89,7 +89,7 @@
 <div id="page-events" class="page">
   <div class="page-header">
     <h2>🏆 所有赛事</h2>
-    <button class="btn btn-primary" onclick="showPage('admin');switchAdminTab('create')">+ 创建赛事</button>
+    <button class="btn btn-primary" id="create-event-btn" onclick="showPage('admin');switchAdminTab('create')" style="display:none">+ 创建赛事</button>
   </div>
   <div id="events-list" class="events-list"></div>
 </div>
