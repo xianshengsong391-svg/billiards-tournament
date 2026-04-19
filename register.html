@@ -225,13 +225,38 @@ let selectedStore = '';
 // 初始化
 window.addEventListener('DOMContentLoaded', () => {
   const eid = getParam('eid');
+  const d = getParam('d');  // 获取 d 参数
 
   if (!eid) {
     showError('缺少赛事ID，请使用正确的报名链接');
     return;
   }
 
-  // 先尝试从 localStorage 获取（同设备，响应最快）
+  // 优先从 d 参数解析数据（二维码携带的完整数据）
+  if (d) {
+    try {
+      const decoded = JSON.parse(decodeURIComponent(d));
+      // 把压缩的字段名还原
+      currentEvent = {
+        id: decoded.i || eid,
+        name: decoded.n,
+        type: decoded.t,
+        contact: decoded.c,
+        date: decoded.d,
+        location: decoded.l,
+        fee: decoded.f,
+        rules: decoded.r,
+        stores: decoded.s
+      };
+      renderEvent();
+      return;
+    } catch (e) {
+      console.log('解析 d 参数失败:', e);
+      // 继续尝试其他方式
+    }
+  }
+
+  // 再尝试从 localStorage 获取
   const events = getEvents();
   const localEvt = events.find(e => e.id === eid);
   if (localEvt) {
@@ -240,7 +265,7 @@ window.addEventListener('DOMContentLoaded', () => {
     return;
   }
 
-  // 再从后端 API（GitHub Gist）获取（跨设备）
+  // 最后从后端 API 获取
   loadEventFromAPI(eid);
 });
 
