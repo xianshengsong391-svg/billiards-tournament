@@ -64,9 +64,14 @@ function saveSettings_()   { DB.set('settings', getSettings()); }
 
 // 登录状态管理
 function isAdminLoggedIn() {
-  const settings = getSettings();
-  if (!settings.adminPwd) return true; // 未设置密码时免登录
+  // 必须明确登录，不再免登录
   return sessionStorage.getItem('adminLoggedIn') === 'true';
+}
+
+// 检查是否设置了密码
+function hasAdminPassword() {
+  const settings = getSettings();
+  return !!settings.adminPwd;
 }
 
 function doLogin() {
@@ -96,14 +101,59 @@ function showAdminPanel() {
   document.getElementById('admin-login-panel').style.display = 'none';
   document.getElementById('admin-content').style.display = 'block';
   refreshAdminSelects();
+  // 登录成功后显示创建赛事按钮
+  updateCreateEventButton();
+}
+
+// 更新创建赛事按钮显示状态
+function updateCreateEventButton() {
+  const btn = document.getElementById('create-event-btn');
+  if (btn) {
+    btn.style.display = isAdminLoggedIn() ? 'inline-block' : 'none';
+  }
 }
 
 function checkAdminLogin() {
+  // 检查是否设置了密码
+  if (!hasAdminPassword()) {
+    document.getElementById('admin-login-panel').style.display = 'flex';
+    document.getElementById('admin-content').style.display = 'none';
+    document.querySelector('.login-box h2').textContent = '🔐 首次使用';
+    document.querySelector('.login-box .login-sub').textContent = '请先设置管理员密码';
+    document.getElementById('login-password').placeholder = '设置新密码';
+    document.querySelector('.login-hint').textContent = '设置密码后即可使用管理功能';
+    // 修改登录按钮为设置密码
+    const loginBtn = document.querySelector('.login-box .btn-primary');
+    loginBtn.textContent = '设置密码';
+    loginBtn.onclick = function() {
+      const pwd = document.getElementById('login-password').value.trim();
+      if (pwd.length < 4) {
+        document.getElementById('login-error').textContent = '密码至少4位';
+        return;
+      }
+      const settings = getSettings();
+      settings.adminPwd = pwd;
+      DB.set('settings', settings);
+      sessionStorage.setItem('adminLoggedIn', 'true');
+      showToast('密码设置成功');
+      showAdminPanel();
+    };
+    return;
+  }
+  
   if (isAdminLoggedIn()) {
     showAdminPanel();
   } else {
     document.getElementById('admin-login-panel').style.display = 'flex';
     document.getElementById('admin-content').style.display = 'none';
+    // 恢复登录界面
+    document.querySelector('.login-box h2').textContent = '🔐 后台管理登录';
+    document.querySelector('.login-box .login-sub').textContent = '大金台球棋牌连锁 · 赛事管理系统';
+    document.getElementById('login-password').placeholder = '请输入密码';
+    document.querySelector('.login-hint').textContent = '首次使用请在系统设置中设置密码';
+    const loginBtn = document.querySelector('.login-box .btn-primary');
+    loginBtn.textContent = '登录';
+    loginBtn.onclick = doLogin;
   }
 }
 
@@ -124,6 +174,9 @@ function showPage(name) {
   const p = document.getElementById('page-' + name);
   if (p) p.classList.add('active');
   const n = document.getElementById('nav-' + name);
+  
+  // 更新创建赛事按钮显示状态
+  updateCreateEventButton();
   if (n) n.classList.add('active');
 
   if (name === 'home')   renderHome();
@@ -261,7 +314,7 @@ function renderEventsList() {
   const events = getEvents();
   const el = document.getElementById('events-list');
   if (events.length === 0) {
-    el.innerHTML = '<div class="empty-tip">还没有赛事，<a onclick="showPage(\'admin\');switchAdminTab(\'create\')">去创建第一个赛事</a></div>';
+    el.innerHTML = '<div class="empty-tip">还没有赛事</div>';
     return;
   }
   el.innerHTML = events.map(e => eventCardHTML(e)).join('');
