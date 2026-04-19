@@ -721,10 +721,11 @@ function showRegisterQR() {
   if (!evt) { showToast('赛事数据异常'); return; }
 
   const settings = getSettings();
-  const base = settings.siteUrl || (window.location.origin + window.location.pathname.replace('index.html',''));
+  // 使用 Cloudflare Pages 地址作为基础URL
+  const base = 'https://billiards-tournament.pages.dev';
 
   // 只传赛事ID，数据由后端(Gist)提供，二维码保持简洁
-  const url = base.replace(/\/$/, '') + '/register.html?eid=' + currentEventId;
+  const url = base + '/register.html?eid=' + currentEventId;
 
   try {
     if (typeof QRCode === 'undefined') {
