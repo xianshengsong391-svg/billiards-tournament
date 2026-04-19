@@ -516,7 +516,9 @@ function showRegisterQR() {
    
   // 只放核心数据，收款码等大数据不放（避免URL太长）
   // 压缩：用短key
-  // 二维码携带核心数据（兼容移动端，避免API请求被拦截）
+  // 二维码携带完整数据（兼容移动端，避免API请求被拦截）
+  // 规则截断到500字，避免二维码太密集
+  const rulesShort = evt.rules ? (evt.rules.length > 500 ? evt.rules.substring(0, 500) + '...' : evt.rules) : '';
   const minData = {
     i: evt.id,
     n: evt.name,
@@ -525,6 +527,7 @@ function showRegisterQR() {
     d: evt.date,
     l: evt.location,
     f: evt.fee,
+    r: rulesShort,
     s: evt.stores,
     w: evt.wechatQR || '',
     a: evt.alipayQR || ''
