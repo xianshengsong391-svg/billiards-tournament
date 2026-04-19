@@ -307,6 +307,7 @@ async function loadEventFromAPI(eid) {
     showError('无法加载赛事数据，请检查网络连接后重试');
   }
 }
+
 // 从API获取完整赛事数据（用于获取规则）
 async function loadEventFullData(eid) {
   const API_BASE = 'https://billiards-api.xianshengsong391.workers.dev';
@@ -322,6 +323,7 @@ async function loadEventFullData(eid) {
   }
   return null;
 }
+
 function showError(msg) {
   document.getElementById('loading').style.display = 'none';
   document.getElementById('error').style.display = 'block';
@@ -340,26 +342,30 @@ function renderEvent() {
   document.getElementById('event-location').textContent = '📍 ' + (evt.location || '待定');
   document.getElementById('event-fee').textContent = evt.fee || 0;
 
-// 显示/隐藏查看规则按钮
-const rulesBtn = document.getElementById('view-rules-btn');
-if (evt.rules && evt.rules.trim()) {
-  rulesBtn.style.display = 'block';
-  rulesBtn.onclick = () => showRulesModal(evt.rules);
-} else {
-  // 二维码里没有规则，从API获取
-  rulesBtn.style.display = 'block';
-  rulesBtn.textContent = '📋 查看赛事规则';
-  rulesBtn.onclick = async () => {
-    rulesBtn.textContent = '⏳ 加载中...';
-    const fullEvent = await loadEventFullData(evt.id);
-    if (fullEvent && fullEvent.rules) {
-      showRulesModal(fullEvent.rules);
-    } else {
-      showRulesModal('暂无赛事规则');
-    }
+  // 显示/隐藏查看规则按钮
+  const rulesBtn = document.getElementById('view-rules-btn');
+  if (evt.rules && evt.rules.trim()) {
+    // 二维码里有规则，直接显示
+    rulesBtn.style.display = 'block';
     rulesBtn.textContent = '📋 查看赛事规则';
-  };
-}
+    rulesBtn.onclick = () => showRulesModal(evt.rules);
+  } else {
+    // 二维码里没有规则，点击后从API获取
+    rulesBtn.style.display = 'block';
+    rulesBtn.textContent = '📋 查看赛事规则';
+    rulesBtn.onclick = async () => {
+      rulesBtn.textContent = '⏳ 加载中...';
+      rulesBtn.disabled = true;
+      const fullEvent = await loadEventFullData(evt.id);
+      if (fullEvent && fullEvent.rules) {
+        showRulesModal(fullEvent.rules);
+      } else {
+        showRulesModal('暂无赛事规则');
+      }
+      rulesBtn.textContent = '📋 查看赛事规则';
+      rulesBtn.disabled = false;
+    };
+  }
 
   // 门店选择
   const stores = evt.stores && evt.stores.length > 0 ? evt.stores : ['韩家墅店','青光店','王庆坨店'];
