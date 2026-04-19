@@ -376,19 +376,8 @@ function toggleEventStatus(id) {
   showToast('赛事状态已更新');
 }
 
-async function deleteEvent(id) {
+function deleteEvent(id) {
   if (!confirm('确认删除这个赛事？此操作不可恢复！')) return;
-  
-  // 先调用API删除
-  try {
-    if (window.api) {
-      await window.api.deleteEvent(id);
-    }
-  } catch (e) {
-    console.log('API删除失败:', e);
-  }
-  
-  // 再删除本地数据
   const events = getEvents().filter(e => e.id !== id);
   saveEvents(events);
   currentEventId = null;
@@ -527,8 +516,22 @@ function showRegisterQR() {
    
   // 只放核心数据，收款码等大数据不放（避免URL太长）
   // 压缩：用短key
-  // 二维码只放赛事ID，数据从API获取
-  const url = base.replace(/\/$/, '') + '/register.html?eid=' + currentEventId;
+  // 二维码携带核心数据（兼容移动端，避免API请求被拦截）
+  const minData = {
+    i: evt.id,
+    n: evt.name,
+    t: evt.type,
+    c: evt.customType,
+    d: evt.date,
+    l: evt.location,
+    f: evt.fee,
+    s: evt.stores,
+    w: evt.wechatQR || '',
+    a: evt.alipayQR || ''
+  };
+  
+  const encodedData = encodeURIComponent(JSON.stringify(minData));
+  const url = base.replace(/\/$/, '') + '/register.html?eid=' + currentEventId + '&d=' + encodedData;
 
   try {
     new QRCode(qcDiv, {
