@@ -126,7 +126,7 @@ body { padding-top: 0; background: linear-gradient(135deg, #051a0d 0%, #0a2e1a 5
     <div class="error-icon">⚠️</div>
     <h3>无法加载赛事</h3>
     <p id="error-msg">请检查链接是否正确</p>
-    <button class="btn btn-primary" onclick="location.href='index.html'">返回首页</button>
+    <button class="btn btn-primary" onclick="location.reload()">重新加载</button>
   </div>
 
   <!-- 报名表单 -->
@@ -246,7 +246,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
 // 从API加载赛事数据（GitHub Gist 后端持久化）
 async function loadEventFromAPI(eid) {
-  const API_BASE = 'https://billiards-tournament-two.vercel.app/api/events';
+  const API_BASE = 'https://billiards-api.xianshengsong391.workers.dev';
   try {
     const res = await fetch(`${API_BASE}?action=get&id=${encodeURIComponent(eid)}`);
     if (!res.ok) throw new Error('网络错误');
