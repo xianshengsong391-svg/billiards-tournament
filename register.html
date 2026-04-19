@@ -448,7 +448,7 @@ function typeLabel(type, custom) {
   return map[type] || type;
 }
 
-async function submitRegister() {
+function submitRegister() {
   const name = document.getElementById('player-name').value.trim();
   const phone = document.getElementById('player-phone').value.trim();
   const seed = document.getElementById('player-seed').value.trim();
@@ -461,26 +461,27 @@ async function submitRegister() {
   // 选手报名信息
   const playerData = {
     id: uid(),
-    name,
-    phone,
-    seed,
+    name: name,
+    phone: phone,
+    seed: seed,
     store: selectedStore,
     status: 'pending',
     addedAt: Date.now(),
     source: 'online'
   };
 
-  // 提交到后端API（关键！让主办方能看到）
-  let apiSuccess = false;
-  try {
-    if (window.api) {
-      apiSuccess = await window.api.register(currentEvent.id, playerData);
-      if (apiSuccess) {
-        showToast('报名提交成功！');
+  // 立即显示成功（不等待API）
+  document.getElementById('success-modal').style.display = 'flex';
+
+  // 后台静默提交到API（不阻塞用户）
+  if (window.api) {
+    window.api.register(currentEvent.id, playerData).then(function(success) {
+      if (success) {
+        console.log('报名数据已同步到服务器');
       }
-    }
-  } catch (e) {
-    console.log('API提交失败:', e);
+    }).catch(function(e) {
+      console.log('API提交失败:', e);
+    });
   }
 
   // 同时保存到本地（作为备份）
@@ -493,9 +494,6 @@ async function submitRegister() {
       localStorage.setItem('daking_events', JSON.stringify(events));
     }
   }
-
-  // 显示成功
-  document.getElementById('success-modal').style.display = 'flex';
 }
 
 function closeSuccess() {
