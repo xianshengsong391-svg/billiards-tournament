@@ -64,6 +64,35 @@ const api = {
     const res = await fetch(`${API_BASE}?action=registrations&eventId=${eventId}`);
     const data = await res.json();
     return data.success ? data.data : [];
+  },
+
+  // 检查是否已设置密码
+  async hasPassword() {
+    const res = await fetch(`${API_BASE}?action=getPassword`);
+    const data = await res.json();
+    return data.success ? data.hasPassword : false;
+  },
+
+  // 设置密码
+  async setPassword(password) {
+    const res = await fetch(`${API_BASE}?action=setPassword`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password })
+    });
+    const data = await res.json();
+    return data.success;
+  },
+
+  // 验证密码
+  async checkPassword(password) {
+    const res = await fetch(`${API_BASE}?action=checkPassword`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password })
+    });
+    const data = await res.json();
+    return data.success ? data.valid : false;
   }
 };
 
