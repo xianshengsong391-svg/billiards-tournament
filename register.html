@@ -243,49 +243,15 @@ let currentEvent = null;
 let selectedStore = '';
 
 // 初始化
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', function() {
   const eid = getParam('eid');
-  const d = getParam('d');  // 获取 d 参数
 
   if (!eid) {
     showError('缺少赛事ID，请使用正确的报名链接');
     return;
   }
 
-  // 优先从 d 参数解析数据（二维码携带的完整数据）
-  if (d) {
-    try {
-      const decoded = JSON.parse(decodeURIComponent(d));
-      // 把压缩的字段名还原
-      currentEvent = {
-        id: decoded.i || eid,
-        name: decoded.n,
-        type: decoded.t,
-        contact: decoded.c,
-        date: decoded.d,
-        location: decoded.l,
-        fee: decoded.f,
-        rules: decoded.r,
-        stores: decoded.s
-      };
-      renderEvent();
-      return;
-    } catch (e) {
-      console.log('解析 d 参数失败:', e);
-      // 继续尝试其他方式
-    }
-  }
-
-  // 再尝试从 localStorage 获取
-  const events = getEvents();
-  const localEvt = events.find(e => e.id === eid);
-  if (localEvt) {
-    currentEvent = localEvt;
-    renderEvent();
-    return;
-  }
-
-  // 最后从后端 API 获取
+  // 直接从 API 获取完整数据（包括规则）
   loadEventFromAPI(eid);
 });
 
@@ -308,25 +274,7 @@ async function loadEventFromAPI(eid) {
   }
 }
 
-// 从API获取完整赛事数据（用于获取规则）
-function loadEventFullData(eid) {
-  const API_BASE = 'https://billiards-api.xianshengsong391.workers.dev';
-  return fetch(API_BASE + '?action=get&id=' + encodeURIComponent(eid))
-    .then(function(res) {
-      if (!res.ok) throw new Error('网络错误');
-      return res.json();
-    })
-    .then(function(data) {
-      if (data.success && data.data) {
-        return data.data;
-      }
-      return null;
-    })
-    .catch(function(e) {
-      console.error('获取完整赛事数据失败:', e);
-      return null;
-    });
-}
+
 
 function showError(msg) {
   document.getElementById('loading').style.display = 'none';
@@ -346,35 +294,16 @@ function renderEvent() {
   document.getElementById('event-location').textContent = '📍 ' + (evt.location || '待定');
   document.getElementById('event-fee').textContent = evt.fee || 0;
 
-  // 显示/隐藏查看规则按钮
+  // 显示/隐藏查看规则按钮（数据已从API加载，直接显示）
   const rulesBtn = document.getElementById('view-rules-btn');
   if (evt.rules && evt.rules.trim()) {
-    // 二维码里有规则，直接显示
-    rulesBtn.style.display = 'block';
-    rulesBtn.textContent = '📋 查看赛事规则';
-    rulesBtn.onclick = () => showRulesModal(evt.rules);
-  } else {
-    // 二维码里没有规则，点击后从API获取
     rulesBtn.style.display = 'block';
     rulesBtn.textContent = '📋 查看赛事规则';
     rulesBtn.onclick = function() {
-      rulesBtn.textContent = '⏳ 加载中...';
-      rulesBtn.disabled = true;
-      
-      loadEventFullData(evt.id).then(function(fullEvent) {
-        if (fullEvent && fullEvent.rules) {
-          showRulesModal(fullEvent.rules);
-        } else {
-          showRulesModal('暂无赛事规则');
-        }
-      }).catch(function(err) {
-        console.error('加载规则失败:', err);
-        showRulesModal('加载失败，请检查网络');
-      }).finally(function() {
-        rulesBtn.textContent = '📋 查看赛事规则';
-        rulesBtn.disabled = false;
-      });
+      showRulesModal(evt.rules);
     };
+  } else {
+    rulesBtn.style.display = 'none';
   }
 
   // 门店选择
